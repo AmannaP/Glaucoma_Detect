@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'screens/landing.dart';
+import 'screens/home_dashboard.dart';
 import 'screens/scan_screen.dart';
 import 'screens/scan_history.dart';
 import 'screens/recommendations.dart';
@@ -24,17 +25,30 @@ class EyeDetectApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryGreen = Color(0xFF00C853);
+    
     return MaterialApp(
-      title: 'EyeDetect',
+      title: 'Glaucoma Detect',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        primaryColor: const Color(0xFF006400), // Dark Green
-        scaffoldBackgroundColor: Colors.black, // Black
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF006400),
-          secondary: Color(0xFF00CED1), // Keep Cyan as secondary if needed or use green, let's use green
-          surface: Color(0xFF131C24),
+        primaryColor: primaryGreen,
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            color: primaryGreen,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          iconTheme: IconThemeData(color: primaryGreen),
+        ),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryGreen,
+          primary: primaryGreen,
+          brightness: Brightness.dark,
+          surface: const Color(0xFF131C24),
         ),
         useMaterial3: true,
       ),
@@ -54,7 +68,7 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
   int _selectedIndex = 0;
 
   static const List<Widget> _pages = [
-    ScanScreen(),
+    HomeDashboard(),
     ScanHistoryScreen(),
     RecommendationsScreen(),
     MessagesScreen(),
@@ -69,35 +83,34 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryGreen = Color(0xFF00C853);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'EyeDetect',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: false,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
-          ),
-        ],
-      ),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF006400),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.remove_red_eye), label: 'Detect'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-          BottomNavigationBarItem(icon: Icon(Icons.local_hospital), label: 'Doctors'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.black,
+          selectedItemColor: primaryGreen,
+          unselectedItemColor: Colors.grey[600],
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          elevation: 10,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+            BottomNavigationBarItem(icon: Icon(Icons.local_hospital_outlined), activeIcon: Icon(Icons.local_hospital), label: 'Doctors'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), activeIcon: Icon(Icons.chat_bubble), label: 'Chat'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }

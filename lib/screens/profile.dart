@@ -11,7 +11,7 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 20),
         const CircleAvatar(
           radius: 50,
-          backgroundColor: Color(0xFF006400),
+          backgroundColor: Color(0xFF00C853),
           child: Icon(Icons.person, size: 60, color: Colors.white),
         ),
         const SizedBox(height: 16),
@@ -46,7 +46,7 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildSettingOption(IconData icon, String title) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF006400)),
+      leading: Icon(icon, color: const Color(0xFF00C853)),
       title: Text(title, style: const TextStyle(color: Colors.white)),
       trailing: const Icon(Icons.chevron_right, color: Colors.white54),
       onTap: () {},
