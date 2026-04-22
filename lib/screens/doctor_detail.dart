@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
 
 class DoctorDetailScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
@@ -14,6 +17,83 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  String? _selectedTime;
+  List<String> _busySlots = [];
+  bool _isBooking = false;
+  bool _isLoadingSlots = false;
+
+  final List<String> _allTimeSlots = [
+    "09:00 AM", "10:00 AM", "11:00 AM",
+    "01:00 PM", "02:00 PM", "03:00 PM",
+    "04:00 PM", "05:00 PM"
+  ];
+
+  Future<void> _fetchBusySlots(DateTime date) async {
+    setState(() {
+      _isLoadingSlots = true;
+      _selectedTime = null;
+    });
+
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+      final response = await http.get(
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/appointments.php?doctor_name=${widget.doctor['name']}&date=$dateStr'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          setState(() {
+            _busySlots = List<String>.from(data['busy_slots']);
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching slots: $e");
+    } finally {
+      setState(() {
+        _isLoadingSlots = false;
+      });
+    }
+  }
+
+  Future<void> _bookAppointment() async {
+    if (_selectedDay == null || _selectedTime == null) return;
+
+    setState(() {
+      _isBooking = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id') ?? 1; // Fallback for demo
+      final dateStr = _selectedDay!.toIso8601String().split('T')[0];
+
+      final response = await http.post(
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/appointments.php'),
+        body: json.encode({
+          "user_id": userId,
+          "doctor_name": widget.doctor['name'],
+          "specialty": widget.doctor['specialty'],
+          "date": dateStr,
+          "time": _selectedTime
+        }),
+      );
+
+      final result = json.decode(response.body);
+      if (result['status'] == 'success') {
+        _showBookingConfirmation();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'])));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    } finally {
+      setState(() {
+        _isBooking = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +207,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   _selectedDay = selectedDay;
                   _focusedDay = focusedDay;
                 });
+                _fetchBusySlots(selectedDay);
               },
               onFormatChanged: (format) {
                 setState(() {
@@ -144,6 +225,56 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
             const SizedBox(height: 20),
 
+            // Time Slots
+            if (_selectedDay != null) ...[
+               Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Select Time", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryGreen)),
+                    if (_isLoadingSlots) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: primaryGreen)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 15),
+              SizedBox(
+                height: 50,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _allTimeSlots.length,
+                  itemBuilder: (context, index) {
+                    final time = _allTimeSlots[index];
+                    final isBusy = _busySlots.contains(time);
+                    final isSelected = _selectedTime == time;
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: ChoiceChip(
+                        label: Text(time),
+                        selected: isSelected,
+                        onSelected: isBusy ? null : (selected) {
+                          setState(() {
+                            _selectedTime = selected ? time : null;
+                          });
+                        },
+                        selectedColor: primaryGreen,
+                        backgroundColor: const Color(0xFF131C24),
+                        disabledColor: Colors.red.withOpacity(0.1),
+                        labelStyle: TextStyle(
+                          color: isBusy ? Colors.red : (isSelected ? Colors.black : Colors.white),
+                          decoration: isBusy ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
             // Book Button
             Padding(
               padding: const EdgeInsets.all(20.0),
@@ -151,17 +282,19 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: _selectedDay == null
+                  onPressed: (_selectedDay == null || _selectedTime == null || _isBooking)
                       ? null
                       : () {
-                          _showBookingConfirmation();
+                          _bookAppointment();
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryGreen,
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
-                  child: const Text("Confirm Appointment", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: _isBooking 
+                    ? const CircularProgressIndicator(color: Colors.black)
+                    : const Text("Confirm Appointment", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),

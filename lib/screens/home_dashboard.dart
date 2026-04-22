@@ -1,9 +1,22 @@
-import 'package:flutter/material.dart';
-import 'scan_screen.dart';
-import 'recommendations.dart';
+import 'notifications.dart';
+import 'profile.dart';
 
-class HomeDashboard extends StatelessWidget {
+class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
+
+  @override
+  State<HomeDashboard> createState() => _HomeDashboardState();
+}
+
+class _HomeDashboardState extends State<HomeDashboard> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,23 +48,33 @@ class HomeDashboard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundColor: primaryGreen.withOpacity(0.1),
-                        child: const Icon(Icons.person, color: primaryGreen),
-                      ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: const Text("2", style: TextStyle(color: Colors.white, fontSize: 10)),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                    },
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 25,
+                          backgroundColor: primaryGreen.withOpacity(0.1),
+                          child: const Icon(Icons.person, color: primaryGreen),
                         ),
-                      )
-                    ],
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                              child: const Text("2", style: TextStyle(color: Colors.white, fontSize: 10)),
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -68,13 +91,24 @@ class HomeDashboard extends StatelessWidget {
                   ],
                 ),
                 child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: "Search doctors, clinics...",
                     hintStyle: const TextStyle(color: Colors.white54),
                     border: InputBorder.none,
                     icon: const Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: Icon(Icons.tune, color: primaryGreen),
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.tune, color: primaryGreen),
+                      onPressed: () {
+                        // Optional filter logic
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -133,7 +167,12 @@ class HomeDashboard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                    const Text("Doctor Specialty", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                  TextButton(onPressed: () {}, child: const Text("See all", style: TextStyle(color: primaryGreen))),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendationsScreen()));
+                    }, 
+                    child: const Text("See all", style: TextStyle(color: primaryGreen))
+                  ),
                 ],
               ),
               const SizedBox(height: 15),
@@ -156,12 +195,16 @@ class HomeDashboard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Top Doctors", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accentGreen)),
-                  TextButton(onPressed: () {}, child: const Text("See all", style: TextStyle(color: accentGreen))),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendationsScreen()));
+                    }, 
+                    child: const Text("See all", style: TextStyle(color: accentGreen))
+                  ),
                 ],
               ),
               const SizedBox(height: 15),
-              // We can reuse a simplified version of RecommendationsScreen here or a grid
-              const RecommendationsScreen(), // This will be updated to handle the new theme
+              RecommendationsScreen(searchQuery: _searchQuery),
             ],
           ),
         ),

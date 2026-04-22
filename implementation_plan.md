@@ -5,13 +5,23 @@ This plan outlines the steps to introduce a PHP backend for image processing, re
 ## User Review Required
 
 > [!IMPORTANT]
-> **PHP Environment**: The backend will be hosted at `http://169.239.251.102:280/~chika.amanna/`. I will ensure all API calls point to this specific endpoint.
+> - I will use the provided server credentials for the database connection:
+>   - Server: `localhost`
+>   - User: `chika.amanna`
+>   - Database: `mobileapps_2026B_chika_amanna`
+> - I will implement the Appointment History with two separate tabs: **Upcoming** and **Past**.
+> - I will integrate a double-booking prevention logic to mark selected slots as "busy".
+> - Notifications will include both real-time alerts and a persistent list for tracking.
 > **Home Screen Aesthetic**: I will move the app from a dark-only theme to a professional Blue/White aesthetic as shown in your reference image.
 > **Packages**: I will add `image_picker` for file uploads and `table_calendar` for the appointment scheduling feature.
 
 ## Proposed Changes
 
 Location: `http://169.239.251.102:280/~chika.amanna/glaucoma_backend/`
+
+#### [NEW] [db_config.php](file:///c:/Users/HP/Mobile_App/glaucoma_detect/backend/db_config.php) [NEW]
+- Use the provided credentials (`chika.amanna`, `69Captain#`, etc.) for PDO connection.
+- Centralize connection logic for all PHP scripts.
 
 #### [NEW] [detect.php](file:///C:/Users/HP/Mobile_App/glaucoma_detect/backend/detect.php)
 - Handle image uploads and return diagnostic results. Hosted at `.../glaucoma_backend/detect.php`.
@@ -23,13 +33,18 @@ Location: `http://169.239.251.102:280/~chika.amanna/glaucoma_backend/`
 
 ### Flutter UI & Navigation Redesign
 
-#### [NEW] [home_dashboard.dart](file:///C:/Users/HP/Mobile_App/glaucoma_detect/lib/screens/home_dashboard.dart)
-- **High-Fidelity Dashboard** (Mockup-matched):
-  - User header with profile image and notification badges.
-  - Custom Search bar with filter icon.
-  - "Medical Checks!" featured banner with quick "Check Now" access.
-  - "Doctor Specialty" horizontally scrollable/grid categories (Ophthalmology, etc.).
-  - "Top Doctors" vertical list with category filters.
+#### [MODIFY] [home_dashboard.dart](file:///c:/Users/HP/Mobile_App/glaucoma_detect/lib/screens/home_dashboard.dart)
+- **Search**: Implement a local filter for the doctor list using `TextEditingController`.
+- **User Icon**: Navigate to `ProfileScreen`.
+- **Notifications**: Create a new `NotificationsScreen` with a persistent list and simulate alerts for scan results.
+- **See All Buttons**: Hook up navigation to appropriate views.
+- "Doctor Specialty" horizontally scrollable/grid categories (Ophthalmology, etc.).
+- "Top Doctors" vertical list with category filters.
+
+#### [NEW] [appointment_history.dart](file:///C:/Users/HP/Mobile_App/glaucoma_detect/lib/screens/appointment_history.dart) [NEW]
+- Implement a Tabbed interface (**Upcoming** vs. **Past**).
+- Fetch data from `appointments.php` with date-based filtering.
+- Show detailed Date, Time, and Doctor info for each card.
 
 #### [NEW] [doctor_detail.dart](file:///C:/Users/HP/Mobile_App/glaucoma_detect/lib/screens/doctor_detail.dart)
 - Detailed view of a doctor with bio and specialty.
@@ -66,10 +81,19 @@ Location: `http://169.239.251.102:280/~chika.amanna/glaucoma_backend/`
    - PHP returns a JSON object (e.g., `{"status": "success", "prediction": "Glaucoma Detected", "risk": 0.85}`).
    - Flutter parses this JSON and displays a detailed diagnostic report to the user.
 
-## Open Questions
+## Open Questions (Answered)
 
-- What is the URL/address of the PHP server where you plan to host the backend files? (e.g., `http://192.168.1.5/glaucoma_backend/` or a local domain).
-- Do you have a specific "Home Screen" reference or layout you prefer (e.g., Apple Health style, minimalist medical dashboard)?
+1. **Database Credentials**: Provided by user (Localhost, chika.amanna, 69Captain#, mobileapps_2026B_chika_amanna).
+2. **Notification Content**: Both real-time alerts and a persistent tracking list.
+
+## Flutter Local Resources Summary
+
+We have used the following local resources in this project:
+- **Hardware Access**: Camera (for eye scanning).
+- **Filesystem**: `path_provider` and `image_picker` (for saving/selecting diagnostic images).
+- **Local Persistence**: `shared_preferences` (for login sessions and scan history).
+- **Calendar**: `table_calendar` (for scheduling appointments locally before syncing).
+- **Icons**: `material-icons` and `cupertino_icons`.
 
 ## Verification Plan
 

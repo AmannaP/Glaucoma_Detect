@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 import 'signup.dart';
 import '../main.dart'; // To get MainNavigationHolder
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,6 +13,66 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscureText = true;
+  bool _isLoading = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _login() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/auth.php?action=login'),
+        body: json.encode({
+          "email": _emailController.text.trim(),
+          "password": _passwordController.text.trim(),
+        }),
+      );
+
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('user_id', data['user']['id']);
+        await prefs.setString('user_name', data['user']['full_name']);
+        await prefs.setString('user_email', data['user']['email']);
+
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const MainNavigationHolder()),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +118,7 @@ class _LoginPageState extends State<LoginPage> {
               label: 'Email',
               hint: 'Enter your email',
               icon: Icons.email_outlined,
+              controller: _emailController,
               cardBg: cardBg,
               primaryColor: primaryGreen,
             ),
@@ -68,6 +131,7 @@ class _LoginPageState extends State<LoginPage> {
               icon: Icons.lock_outline,
               isPassword: true,
               obscureText: _obscureText,
+              controller: _passwordController,
               onTogglePassword: () {
                 setState(() {
                   _obscureText = !_obscureText;
@@ -95,27 +159,23 @@ class _LoginPageState extends State<LoginPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  // Navigate to home
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const MainNavigationHolder()),
-                    (route) => false,
-                  );
-                },
+                onPressed: _isLoading ? null : _login,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryGreen,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Sign In',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
+                child: _isLoading 
+                  ? const CircularProgressIndicator(color: Colors.black)
+                  : const Text(
+                      'Sign In',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
               ),
             ),
             
@@ -181,6 +241,7 @@ class _LoginPageState extends State<LoginPage> {
     bool isPassword = false,
     bool obscureText = false,
     VoidCallback? onTogglePassword,
+    required TextEditingController controller,
     required Color cardBg,
     required Color primaryColor,
   }) {
@@ -203,6 +264,7 @@ class _LoginPageState extends State<LoginPage> {
             border: Border.all(color: Colors.white10),
           ),
           child: TextField(
+            controller: controller,
             obscureText: isPassword && obscureText,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(

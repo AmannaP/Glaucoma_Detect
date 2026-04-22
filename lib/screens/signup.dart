@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 import 'login.dart';
 import '../main.dart'; // To get MainNavigationHolder
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -12,6 +14,71 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   bool _obscureText = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _signUp() async {
+    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      return;
+    }
+
+    if (!_agreeToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please agree to terms and conditions")));
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/auth.php?action=signup'),
+        body: json.encode({
+          "full_name": _nameController.text.trim(),
+          "email": _emailController.text.trim(),
+          "password": _passwordController.text.trim(),
+        }),
+      );
+
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        // Automatically login after signup
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Account created! Please login.")));
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +124,7 @@ class _SignUpPageState extends State<SignUpPage> {
               label: 'Full Name',
               hint: 'Enter your name',
               icon: Icons.person_outline,
+              controller: _nameController,
               cardBg: cardBg,
               primaryColor: primaryGreen,
             ),
@@ -67,6 +135,7 @@ class _SignUpPageState extends State<SignUpPage> {
               label: 'Email',
               hint: 'Enter your email',
               icon: Icons.email_outlined,
+              controller: _emailController,
               cardBg: cardBg,
               primaryColor: primaryGreen,
             ),
@@ -79,6 +148,7 @@ class _SignUpPageState extends State<SignUpPage> {
               icon: Icons.lock_outline,
               isPassword: true,
               obscureText: _obscureText,
+              controller: _passwordController,
               onTogglePassword: () {
                 setState(() {
                   _obscureText = !_obscureText;
@@ -136,27 +206,23 @@ class _SignUpPageState extends State<SignUpPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  // Navigate to home after pseudo-signup
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const MainNavigationHolder()),
-                    (route) => false,
-                  );
-                },
+                onPressed: _isLoading ? null : _signUp,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryGreen,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Create Account',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
+                child: _isLoading 
+                  ? const CircularProgressIndicator(color: Colors.black)
+                  : const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
               ),
             ),
             
@@ -197,6 +263,7 @@ class _SignUpPageState extends State<SignUpPage> {
     bool isPassword = false,
     bool obscureText = false,
     VoidCallback? onTogglePassword,
+    required TextEditingController controller,
     required Color cardBg,
     required Color primaryColor,
   }) {
@@ -219,6 +286,7 @@ class _SignUpPageState extends State<SignUpPage> {
             border: Border.all(color: Colors.white10),
           ),
           child: TextField(
+            controller: controller,
             obscureText: isPassword && obscureText,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(

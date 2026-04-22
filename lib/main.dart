@@ -7,6 +7,8 @@ import 'screens/scan_history.dart';
 import 'screens/recommendations.dart';
 import 'screens/messages.dart';
 import 'screens/profile.dart';
+import 'screens/appointment_history.dart';
+import 'screens/notifications.dart';
 
 late List<CameraDescription> cameras;
 
@@ -70,8 +72,8 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
   static const List<Widget> _pages = [
     HomeDashboard(),
     ScanHistoryScreen(),
+    AppointmentHistoryScreen(),
     RecommendationsScreen(),
-    MessagesScreen(),
     ProfileScreen(),
   ];
 
@@ -105,9 +107,9 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
           elevation: 10,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Scans'),
+            BottomNavigationBarItem(icon: Icon(Icons.event_note_outlined), activeIcon: Icon(Icons.event_note), label: 'Appointments'),
             BottomNavigationBarItem(icon: Icon(Icons.local_hospital_outlined), activeIcon: Icon(Icons.local_hospital), label: 'Doctors'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), activeIcon: Icon(Icons.chat_bubble), label: 'Chat'),
             BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
           ],
         ),

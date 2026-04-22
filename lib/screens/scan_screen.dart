@@ -15,15 +15,14 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  CameraController? controller;
-  bool isAnalyzing = false;
   final ImagePicker _picker = ImagePicker();
+  int _cameraIndex = 0; // 0 for back, 1 for front
 
-  @override
-  void initState() {
-    super.initState();
+  void _initializeCamera() {
     if (cameras.isNotEmpty) {
-      controller = CameraController(cameras[0], ResolutionPreset.high);
+      // Ensure we don't go out of bounds if only one camera exists
+      int index = _cameraIndex < cameras.length ? _cameraIndex : 0;
+      controller = CameraController(cameras[index], ResolutionPreset.high);
       controller!.initialize().then((_) {
         if (!mounted) return;
         setState(() {});
@@ -31,6 +30,12 @@ class _ScanScreenState extends State<ScanScreen> {
         print("Camera initialization error: $e");
       });
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
   }
 
   @override
@@ -188,8 +193,24 @@ class _ScanScreenState extends State<ScanScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.flash_off, size: 30, color: Colors.white),
-                      onPressed: () {},
+                      icon: Icon(
+                        _cameraIndex == 0 ? Icons.camera_front : Icons.camera_rear, 
+                        size: 30, 
+                        color: Colors.white
+                      ),
+                      onPressed: () {
+                        if (cameras.length > 1) {
+                          setState(() {
+                            _cameraIndex = _cameraIndex == 0 ? 1 : 0;
+                          });
+                          controller?.dispose();
+                          _initializeCamera();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Only one camera available'))
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),

@@ -1,0 +1,65 @@
+<?php
+require_once 'db_config.php';
+header('Content-Type: application/json');
+
+$action = isset($_GET['action']) ? $_GET['action'] : '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if ($action === 'signup') {
+        if (isset($data['full_name'], $data['email'], $data['password'])) {
+            $full_name = $data['full_name'];
+            $email = $data['email'];
+            $password = password_hash($data['password'], PASSWORD_DEFAULT);
+
+            try {
+                $stmt = $conn->prepare("INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)");
+                $stmt->execute([$full_name, $email, $password]);
+                echo json_encode(["status" => "success", "message" => "User registered successfully"]);
+            } catch (PDOException $e) {
+                if ($e->getCode() == 23000) {
+                    echo json_encode(["status" => "error", "message" => "Email already exists"]);
+                } else {
+                    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+                }
+            }
+        } else {
+            echo json_encode(["status" => "error", "message" => "Missing required fields"]);
+        }
+    } elseif ($action === 'login') {
+        if (isset($data['email'], $data['password'])) {
+            $email = $data['email'];
+            $password = $data['password'];
+
+            try {
+                $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+                $stmt->execute([$email]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($user && password_verify($password, $user['password'])) {
+                    echo json_encode([
+                        "status" => "success",
+                        "message" => "Login successful",
+                        "user" => [
+                            "id" => $user['id'],
+                            "full_name" => $user['full_name'],
+                            "email" => $user['email']
+                        ]
+                    ]);
+                } else {
+                    echo json_encode(["status" => "error", "message" => "Invalid email or password"]);
+                }
+            } catch (PDOException $e) {
+                echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            }
+        } else {
+            echo json_encode(["status" => "error", "message" => "Missing required fields"]);
+        }
+    } else {
+        echo json_encode(["status" => "error", "message" => "Invalid action"]);
+    }
+} else {
+    echo json_encode(["status" => "error", "message" => "Invalid request method"]);
+}
+?>

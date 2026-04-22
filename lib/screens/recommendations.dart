@@ -3,7 +3,8 @@ import 'messages.dart';
 import 'doctor_detail.dart';
 
 class RecommendationsScreen extends StatelessWidget {
-  const RecommendationsScreen({super.key});
+  final String searchQuery;
+  const RecommendationsScreen({super.key, this.searchQuery = ""});
 
   final List<Map<String, dynamic>> doctors = const [
     {"name": "Dr. Alice Green", "specialty": "Glaucoma Specialist", "distance": "2.5 km", "rating": 4.8},
@@ -11,17 +12,26 @@ class RecommendationsScreen extends StatelessWidget {
     {"name": "Dr. Clara Reed", "specialty": "Optometrist", "distance": "8.2 km", "rating": 4.9},
   ];
 
+  ];
+
   @override
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF00C853);
+
+    final filteredDoctors = doctors.where((doc) {
+      final name = doc['name'].toString().toLowerCase();
+      final specialty = doc['specialty'].toString().toLowerCase();
+      final query = searchQuery.toLowerCase();
+      return name.contains(query) || specialty.contains(query);
+    }).toList();
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       shrinkWrap: true, // Needed if used inside SingleChildScrollView of HomeDashboard
       physics: const NeverScrollableScrollPhysics(), // Needed if used inside SingleChildScrollView
-      itemCount: doctors.length,
+      itemCount: filteredDoctors.length,
       itemBuilder: (context, index) {
-        final doc = doctors[index];
+        final doc = filteredDoctors[index];
         return GestureDetector(
           onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => DoctorDetailScreen(doctor: doc)));
