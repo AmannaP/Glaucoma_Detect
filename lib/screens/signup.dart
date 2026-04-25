@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'login.dart';
 import '../main.dart'; // To get MainNavigationHolder
 import 'package:http/http.dart' as http;
@@ -44,6 +45,10 @@ class _SignUpPageState extends State<SignUpPage> {
           "password": _passwordController.text.trim(),
         }),
       );
+
+      if (response.body.startsWith('<!DOCTYPE') || response.body.startsWith('<html>')) {
+        throw Exception("Server returned an error page (HTML). Please check if the backend URL is correct and the database is set up.");
+      }
 
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
@@ -95,162 +100,164 @@ class _SignUpPageState extends State<SignUpPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
-            const Text(
-              'Create Account',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Join Glaucoma Detect for better eye health tracking.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white60,
-              ),
-            ),
-            const SizedBox(height: 40),
-            
-            // Name Field
-            _buildTextField(
-              label: 'Full Name',
-              hint: 'Enter your name',
-              icon: Icons.person_outline,
-              controller: _nameController,
-              cardBg: cardBg,
-              primaryColor: primaryGreen,
-            ),
-            const SizedBox(height: 20),
-            
-            // Email Field
-            _buildTextField(
-              label: 'Email',
-              hint: 'Enter your email',
-              icon: Icons.email_outlined,
-              controller: _emailController,
-              cardBg: cardBg,
-              primaryColor: primaryGreen,
-            ),
-            const SizedBox(height: 20),
-            
-            // Password Field
-            _buildTextField(
-              label: 'Password',
-              hint: 'Create a password',
-              icon: Icons.lock_outline,
-              isPassword: true,
-              obscureText: _obscureText,
-              controller: _passwordController,
-              onTogglePassword: () {
-                setState(() {
-                  _obscureText = !_obscureText;
-                });
-              },
-              cardBg: cardBg,
-              primaryColor: primaryGreen,
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Terms and Privacy
-            Row(
-              children: [
-                SizedBox(
-                  width: 24,
-                  child: Checkbox(
-                    value: _agreeToTerms,
-                    onChanged: (val) {
-                      setState(() {
-                        _agreeToTerms = val ?? false;
-                      });
-                    },
-                    activeColor: primaryGreen,
-                    side: const BorderSide(color: Colors.white30),
-                  ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              const Text(
+                'Create Account',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      style: const TextStyle(color: Colors.white60, fontSize: 13),
-                      children: [
-                        const TextSpan(text: 'I agree to the '),
-                        TextSpan(
-                          text: 'Terms of Service',
-                          style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
-                        ),
-                        const TextSpan(text: ' and '),
-                        TextSpan(
-                          text: 'Privacy Policy',
-                          style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Join Glaucoma Detect for better eye health tracking.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white60,
+                ),
+              ),
+              const SizedBox(height: 40),
+              
+              // Name Field
+              _buildTextField(
+                label: 'Full Name',
+                hint: 'Enter your name',
+                icon: Icons.person_outline,
+                controller: _nameController,
+                cardBg: cardBg,
+                primaryColor: primaryGreen,
+              ),
+              const SizedBox(height: 20),
+              
+              // Email Field
+              _buildTextField(
+                label: 'Email',
+                hint: 'Enter your email',
+                icon: Icons.email_outlined,
+                controller: _emailController,
+                cardBg: cardBg,
+                primaryColor: primaryGreen,
+              ),
+              const SizedBox(height: 20),
+              
+              // Password Field
+              _buildTextField(
+                label: 'Password',
+                hint: 'Create a password',
+                icon: Icons.lock_outline,
+                isPassword: true,
+                obscureText: _obscureText,
+                controller: _passwordController,
+                onTogglePassword: () {
+                  setState(() {
+                    _obscureText = !_obscureText;
+                  });
+                },
+                cardBg: cardBg,
+                primaryColor: primaryGreen,
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Terms and Privacy
+              Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    child: Checkbox(
+                      value: _agreeToTerms,
+                      onChanged: (val) {
+                        setState(() {
+                          _agreeToTerms = val ?? false;
+                        });
+                      },
+                      activeColor: primaryGreen,
+                      side: const BorderSide(color: Colors.white30),
                     ),
                   ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 30),
-            
-            // Sign Up Button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _signUp,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryGreen,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isLoading 
-                  ? const CircularProgressIndicator(color: Colors.black)
-                  : const Text(
-                      'Create Account',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(color: Colors.white60, fontSize: 13),
+                        children: [
+                          const TextSpan(text: 'I agree to the '),
+                          TextSpan(
+                            text: 'Terms of Service',
+                            style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
+                          ),
+                          const TextSpan(text: ' and '),
+                          TextSpan(
+                            text: 'Privacy Policy',
+                            style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ),
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            // Sign In link
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  "Already have an account? ",
-                  style: TextStyle(color: Colors.white60),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                    );
-                  },
-                  child: const Text(
-                    'Sign In',
-                    style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
                   ),
+                ],
+              ),
+              
+              const SizedBox(height: 30),
+              
+              // Sign Up Button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _signUp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryGreen,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading 
+                    ? const CircularProgressIndicator(color: Colors.black)
+                    : const Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 40),
-          ],
+              ),
+              
+              const SizedBox(height: 40),
+              
+              // Sign In link
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Already have an account? ",
+                    style: TextStyle(color: Colors.white60),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                      );
+                    },
+                    child: const Text(
+                      'Sign In',
+                      style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 60), // Increased bottom padding
+            ],
+          ),
         ),
       ),
     );

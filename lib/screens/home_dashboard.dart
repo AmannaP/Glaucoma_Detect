@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
 import 'notifications.dart';
 import 'profile.dart';
+import 'scan_screen.dart';
+import 'recommendations.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});

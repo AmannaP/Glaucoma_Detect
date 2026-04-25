@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'login.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
+import 'messages.dart';
 
 class DoctorDetailScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
@@ -148,6 +151,38 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                             Icon(Icons.location_on, color: Colors.grey[600], size: 20),
                             const SizedBox(width: 4),
                             Text(widget.doctor['distance'], style: const TextStyle(color: Colors.white70)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(
+                                  appBar: AppBar(title: Text(widget.doctor['name']), backgroundColor: Colors.black, foregroundColor: primaryGreen),
+                                  body: const MessagesScreen(),
+                                )));
+                              },
+                              icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                              label: const Text("Message"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF131C24),
+                                foregroundColor: primaryGreen,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              ).copyWith(side: WidgetStateProperty.all(const BorderSide(color: Colors.white10))),
+                            ),
+                            const SizedBox(width: 10),
+                            IconButton(
+                              icon: const Icon(Icons.phone_outlined, color: Colors.white70),
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Calling...")));
+                              },
+                              style: IconButton.styleFrom(
+                                backgroundColor: const Color(0xFF131C24),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.white10)),
+                              ),
+                            ),
                           ],
                         ),
                       ],

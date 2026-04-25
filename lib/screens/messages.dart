@@ -27,18 +27,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          const ListTile(
-            tileColor: Color(0xFF131C24),
-            leading: CircleAvatar(backgroundColor: Color(0xFF006400), child: Icon(Icons.local_hospital, color: Colors.white)),
-            title: Text("Dr. John Smith", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-            subtitle: Text("Ophthalmologist", style: TextStyle(color: Colors.white70)),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 final msg = messages[index];
@@ -98,7 +91,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ),
           ),
         ],
-      ),
     );
   }
 }

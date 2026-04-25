@@ -12,8 +12,6 @@ class RecommendationsScreen extends StatelessWidget {
     {"name": "Dr. Clara Reed", "specialty": "Optometrist", "distance": "8.2 km", "rating": 4.9},
   ];
 
-  ];
-
   @override
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF00C853);

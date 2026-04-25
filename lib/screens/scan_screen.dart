@@ -15,6 +15,8 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen> {
+  CameraController? controller;
+  bool isAnalyzing = false;
   final ImagePicker _picker = ImagePicker();
   int _cameraIndex = 0; // 0 for back, 1 for front
 
