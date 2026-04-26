@@ -62,6 +62,32 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     }
   }
 
+  bool _isSlotInFuture(String slot) {
+    if (_selectedDay == null) return false;
+    
+    final now = DateTime.now();
+    // If selected day is NOT today, it's a future day, so all slots are okay
+    if (!isSameDay(_selectedDay, now)) return true;
+
+    try {
+      final format = DateFormat("hh:mm a");
+      final slotTime = format.parse(slot);
+      
+      final slotDateTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        slotTime.hour,
+        slotTime.minute,
+      );
+
+      // Return true only if the slot is in the future
+      return slotDateTime.isAfter(now);
+    } catch (e) {
+      return true;
+    }
+  }
+
   Future<void> _bookAppointment() async {
     if (_selectedDay == null || _selectedTime == null) return;
 
@@ -302,38 +328,57 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 ),
               ),
               const SizedBox(height: 15),
-              SizedBox(
-                height: 50,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _allTimeSlots.length,
-                  itemBuilder: (context, index) {
-                    final time = _allTimeSlots[index];
-                    final isBusy = _busySlots.contains(time);
-                    final isSelected = _selectedTime == time;
-                    
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: ChoiceChip(
-                        label: Text(time),
-                        selected: isSelected,
-                        onSelected: isBusy ? null : (selected) {
-                          setState(() {
-                            _selectedTime = selected ? time : null;
-                          });
-                        },
-                        selectedColor: primaryGreen,
-                        backgroundColor: const Color(0xFF131C24),
-                        disabledColor: Colors.red.withOpacity(0.1),
-                        labelStyle: TextStyle(
-                          color: isBusy ? Colors.red : (isSelected ? Colors.black : Colors.white),
-                          decoration: isBusy ? TextDecoration.lineThrough : null,
-                        ),
+              Builder(
+                builder: (context) {
+                  final availableSlots = _allTimeSlots.where((time) => _isSlotInFuture(time)).toList();
+                  
+                  if (availableSlots.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        "No slots available for the rest of today. Please select a future date.",
+                        style: TextStyle(color: Colors.redAccent, fontSize: 14),
                       ),
                     );
-                  },
-                ),
+                  }
+
+                  return SizedBox(
+                    height: 50,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _allTimeSlots.length,
+                      itemBuilder: (context, index) {
+                        final time = _allTimeSlots[index];
+                        final isBusy = _busySlots.contains(time);
+                        final isFuture = _isSlotInFuture(time);
+                        final isSelected = _selectedTime == time;
+                        
+                        if (!isFuture) return const SizedBox.shrink();
+
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: ChoiceChip(
+                            label: Text(time),
+                            selected: isSelected,
+                            onSelected: isBusy ? null : (selected) {
+                              setState(() {
+                                _selectedTime = selected ? time : null;
+                              });
+                            },
+                            selectedColor: primaryGreen,
+                            backgroundColor: const Color(0xFF131C24),
+                            disabledColor: Colors.red.withOpacity(0.1),
+                            labelStyle: TextStyle(
+                              color: isBusy ? Colors.red : (isSelected ? Colors.black : Colors.white),
+                              decoration: isBusy ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                }
               ),
             ],
 

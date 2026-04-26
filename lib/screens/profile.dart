@@ -8,7 +8,8 @@ import 'doctor_prescriptions.dart';
 import 'coming_soon.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final Function(int)? onTabChange;
+  const ProfileScreen({super.key, this.onTabChange});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -97,7 +98,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const PrescriptionsListScreen()));
               }),
               _buildSettingOption(Icons.history, 'Scan History', () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanHistoryScreen()));
+                if (widget.onTabChange != null) {
+                  widget.onTabChange!(1); // Switch to Scans tab
+                } else {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanHistoryScreen()));
+                }
               }),
             ] else ...[
               _buildSettingOption(Icons.description_outlined, 'Issued Prescriptions', () {

@@ -115,7 +115,7 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
       const ScanHistoryScreen(),
       const AppointmentHistoryScreen(),
       const RecommendationsScreen(),
-      const ProfileScreen(),
+      ProfileScreen(onTabChange: _onItemTapped),
     ];
   }
 

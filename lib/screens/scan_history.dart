@@ -38,20 +38,34 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF00C853);
 
-    if (isLoading) return const Center(child: CircularProgressIndicator());
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: primaryGreen)),
+      );
+    }
 
     if (history.isEmpty) {
-      return const Center(child: Text("No scan history yet.", style: TextStyle(color: Colors.grey)));
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.history, size: 64, color: Colors.white.withOpacity(0.2)),
+              const SizedBox(height: 16),
+              const Text(
+                "No scan history yet.",
+                style: TextStyle(color: Colors.white60, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text("Scan History", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.black,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: history.length,
