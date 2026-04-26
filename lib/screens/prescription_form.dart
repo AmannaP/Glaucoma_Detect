@@ -205,7 +205,7 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
               pw.Text(_medicationController.text, style: const pw.TextStyle(fontSize: 14)),
               pw.SizedBox(height: 20),
               pw.Text("Additional Notes:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-              pw.Text(_notesController.text.isNotEmpty ? _notesController.text : "None", style: const pw.TextStyle(fontSize: 14)),
+              pw.Text(_instructionsController.text.isNotEmpty ? _instructionsController.text : "None", style: const pw.TextStyle(fontSize: 14)),
               pw.Spacer(),
               pw.Divider(),
               pw.Text("Electronically signed", style: pw.TextStyle(fontStyle: pw.FontStyle.italic)),

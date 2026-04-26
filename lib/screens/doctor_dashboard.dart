@@ -16,50 +16,43 @@ class DoctorDashboard extends StatefulWidget {
 class _DoctorDashboardState extends State<DoctorDashboard> {
   List<dynamic> _appointments = [];
   bool _isLoading = true;
-  String _doctorName = "Dr. Alice Green"; // Mock doctor name
+  String _doctorName = "";
 
   @override
   void initState() {
     super.initState();
+    _initDoctor();
+  }
+
+  Future<void> _initDoctor() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _doctorName = prefs.getString('user_name') ?? "Doctor";
+    });
     _fetchAppointments();
   }
 
   Future<void> _fetchAppointments() async {
     setState(() => _isLoading = true);
     try {
-      // In a real app, we'd get the current doctor's name from login/prefs
       final response = await http.get(
-        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/appointments.php?doctor_name=$_doctorName&date=${DateTime.now().toIso8601String().split('T')[0]}'),
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/appointments.php?action=doctor_dashboard&doctor_name=${Uri.encodeComponent(_doctorName)}'),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
-          // Note: The backend returns busy_slots (times), not full appointment objects in this GET call
-          // For the dashboard, we'd ideally have a better backend endpoint.
-          // Let's simulate appointment objects for the UI demo.
-          setState(() {
-            _appointments = [
-              {
-                "id": 1,
-                "patient_name": "John Doe",
-                "patient_email": "john.doe@example.com",
-                "time": "09:00 AM",
-                "status": "pending",
-                "reason": "Routine Checkup"
-              },
-              {
-                "id": 2,
-                "patient_name": "Jane Smith",
-                "patient_email": "jane.smith@example.com",
-                "time": "11:00 AM",
-                "status": "pending",
-                "reason": "Glaucoma Follow-up"
-              }
-            ];
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _appointments = data['appointments'] ?? [];
+              _isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoading = false);
         }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
       print("Error: $e");
@@ -127,7 +120,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(appt['reason'], style: const TextStyle(color: Colors.white54)),
+                                        Text(appt['reason'] ?? 'Routine Eye Checkup', style: const TextStyle(color: Colors.white54)),
                                       ],
                                     ),
                                     Container(

@@ -44,6 +44,23 @@ if ($method === 'POST') {
         } catch (PDOException $e) {
             echo json_encode(["status" => "error", "message" => $e->getMessage()]);
         }
+    } elseif (isset($_GET['action']) && $_GET['action'] === 'doctor_dashboard' && isset($_GET['doctor_name'])) {
+        // Fetch full appointments for the doctor dashboard
+        $doctor_name = $_GET['doctor_name'];
+        try {
+            $stmt = $conn->prepare("
+                SELECT a.id, a.date, a.time, a.status, u.full_name as patient_name, u.email as patient_email
+                FROM appointments a
+                JOIN users u ON a.user_id = u.id
+                WHERE a.doctor_name = ?
+                ORDER BY a.date ASC, a.time ASC
+            ");
+            $stmt->execute([$doctor_name]);
+            $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(["status" => "success", "appointments" => $appointments]);
+        } catch (PDOException $e) {
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        }
     } elseif (isset($_GET['doctor_name'], $_GET['date'])) {
         // Fetch busy slots for a doctor on a specific date
         $doctor_name = $_GET['doctor_name'];
@@ -57,7 +74,7 @@ if ($method === 'POST') {
             echo json_encode(["status" => "error", "message" => $e->getMessage()]);
         }
     } else {
-        echo json_encode(["status" => "error", "message" => "Missing user_id or doctor_name/date"]);
+        echo json_encode(["status" => "error", "message" => "Missing parameters"]);
     }
 } else {
     echo json_encode(["status" => "error", "message" => "Invalid request method"]);
