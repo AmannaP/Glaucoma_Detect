@@ -30,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/auth.php?action=login'),
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/auth.php?action=login'),
         body: json.encode({
           "email": _emailController.text.trim(),
           "password": _passwordController.text.trim(),
@@ -47,10 +47,26 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setInt('user_id', data['user']['id']);
         await prefs.setString('user_name', data['user']['full_name']);
         await prefs.setString('user_email', data['user']['email']);
+        String userRole = (data['user']['role'] ?? 'patient').toString().trim().toLowerCase();
+        
+        // HACK: Since the live backend currently omits the 'role' column in the JSON response,
+        // we fallback to checking if the user's name starts with "Dr."
+        String fullName = (data['user']['full_name'] ?? '').toString().trim();
+        if (userRole == 'patient' && fullName.toLowerCase().startsWith('dr.')) {
+          userRole = 'doctor';
+        }
+
+        await prefs.setString('user_role', userRole);
+        print("Logged in as: $userRole"); // Debug role
 
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Login successful. Role: $userRole", style: const TextStyle(color: Colors.black)),
+            backgroundColor: const Color(0xFF00C853),
+            duration: const Duration(seconds: 2),
+          ));
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const MainNavigationHolder()),
+            MaterialPageRoute(builder: (_) => MainNavigationHolder(initialRole: userRole)),
             (route) => false,
           );
         }
@@ -183,31 +199,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                 ),
-              ),
-              
-              const SizedBox(height: 40),
-              
-              // Social Login Divider
-              Row(
-                children: [
-                  Expanded(child: Divider(color: Colors.white10)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Or continue with', style: TextStyle(color: Colors.white30)),
-                  ),
-                  Expanded(child: Divider(color: Colors.white10)),
-                ],
-              ),
-              const SizedBox(height: 30),
-              
-              // Social Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildSocialButton(Icons.g_mobiledata, cardBg), // Placeholder for Google
-                  _buildSocialButton(Icons.apple, cardBg),
-                  _buildSocialButton(Icons.facebook, cardBg),
-                ],
               ),
               
               const SizedBox(height: 40),

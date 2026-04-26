@@ -35,7 +35,7 @@ class _AppointmentHistoryScreenState extends State<AppointmentHistoryScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/appointments.php?user_id=$userId'),
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/appointments.php?user_id=$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -72,30 +72,31 @@ class _AppointmentHistoryScreenState extends State<AppointmentHistoryScreen> {
 
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          title: const Text("My Appointments"),
-          backgroundColor: Colors.black,
-          foregroundColor: primaryGreen,
-          bottom: const TabBar(
-            indicatorColor: primaryGreen,
-            labelColor: primaryGreen,
-            unselectedLabelColor: Colors.white60,
-            tabs: [
-              Tab(text: "Upcoming"),
-              Tab(text: "Past"),
-            ],
-          ),
-        ),
-        body: isLoading 
-          ? const Center(child: CircularProgressIndicator(color: primaryGreen))
-          : TabBarView(
-              children: [
-                _buildAppointmentList(upcomingAppointments, isUpcoming: true),
-                _buildAppointmentList(pastAppointments, isUpcoming: false),
+      child: Column(
+        children: [
+          Container(
+            color: Colors.black,
+            child: const TabBar(
+              indicatorColor: primaryGreen,
+              labelColor: primaryGreen,
+              unselectedLabelColor: Colors.white60,
+              tabs: [
+                Tab(text: "Upcoming"),
+                Tab(text: "Past"),
               ],
             ),
+          ),
+          Expanded(
+            child: isLoading 
+              ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+              : TabBarView(
+                  children: [
+                    _buildAppointmentList(upcomingAppointments, isUpcoming: true),
+                    _buildAppointmentList(pastAppointments, isUpcoming: false),
+                  ],
+                ),
+          ),
+        ],
       ),
     );
   }

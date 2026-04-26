@@ -16,6 +16,7 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscureText = true;
   bool _agreeToTerms = false;
   bool _isLoading = false;
+  bool _isDoctor = false; // Hidden role toggle
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -38,11 +39,12 @@ class _SignUpPageState extends State<SignUpPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/auth.php?action=signup'),
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/auth.php?action=signup'),
         body: json.encode({
           "full_name": _nameController.text.trim(),
           "email": _emailController.text.trim(),
           "password": _passwordController.text.trim(),
+          "role": _isDoctor ? 'doctor' : 'patient',
         }),
       );
 
@@ -107,12 +109,25 @@ class _SignUpPageState extends State<SignUpPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              const Text(
-                'Create Account',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              GestureDetector(
+                onLongPress: () {
+                  setState(() {
+                    _isDoctor = !_isDoctor;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(_isDoctor ? "Doctor mode enabled" : "Patient mode enabled"),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: _isDoctor ? primaryGreen : Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),

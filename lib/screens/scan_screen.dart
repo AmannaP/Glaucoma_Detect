@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../main.dart'; 
 import 'scan_detail.dart';
+import '../services/notification_service.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -42,6 +43,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   void dispose() {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     controller?.dispose();
     super.dispose();
   }
@@ -58,54 +60,87 @@ class _ScanScreenState extends State<ScanScreen> {
       isAnalyzing = true;
     });
 
-    try {
-      // REAL PHP BACKEND LOGIC
-      var request = http.MultipartRequest(
-        'POST', 
-        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/detect.php')
-      );
-      
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
-      
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
+    int retryCount = 0;
+    const int maxRetries = 2;
 
-      if (response.statusCode == 200) {
-        final result = json.decode(response.body);
+    Future<void> performAnalysis() async {
+      try {
+        final backendUrl = 'http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/detect.php';
+        var request = http.MultipartRequest('POST', Uri.parse(backendUrl));
+        request.files.add(await http.MultipartFile.fromPath('image', image.path));
         
-        if (result['status'] == 'success') {
-          // Save to SharedPreferences
-          final prefs = await SharedPreferences.getInstance();
-          final String? historyString = prefs.getString('scan_history');
-          List<dynamic> history = historyString != null ? json.decode(historyString) : [];
-          
-          final scanData = {
-            "date": DateTime.now().toIso8601String().split('T')[0],
-            "has_glaucoma": result['prediction'] == "Glaucoma Detected",
-            "glaucoma_type": result['glaucoma_type'],
-            "risk_score": result['risk_score'],
-            "image_path": image.path,
-          };
-          
-          history.add(scanData);
-          await prefs.setString('scan_history', json.encode(history));
+        var streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+        var response = await http.Response.fromStream(streamedResponse);
 
-          if (mounted) {
-            Navigator.pushReplacement(
-              context, 
-              MaterialPageRoute(builder: (_) => ScanDetailScreen(scanData: scanData))
+        if (response.statusCode == 200) {
+          final result = json.decode(response.body);
+          
+          if (result['status'] == 'success') {
+            final prefs = await SharedPreferences.getInstance();
+            final String? historyString = prefs.getString('scan_history');
+            List<dynamic> history = historyString != null ? json.decode(historyString) : [];
+            
+            final scanData = {
+              "date": DateTime.now().toIso8601String().split('T')[0],
+              "has_glaucoma": result['prediction'] == "Glaucoma Detected",
+              "glaucoma_type": result['glaucoma_type'],
+              "risk_score": result['risk_score'],
+              "image_path": image.path,
+            };
+            
+            history.add(scanData);
+            await prefs.setString('scan_history', json.encode(history));
+
+            // Add real notification
+            await NotificationService.addNotification(
+              title: "New Scan Result",
+              body: "Your eye scan analysis is complete. Result: ${result['prediction']}",
+              type: "alert"
             );
+
+            if (mounted) {
+              Navigator.pushReplacement(
+                context, 
+                MaterialPageRoute(builder: (_) => ScanDetailScreen(scanData: scanData))
+              );
+            }
+          } else {
+            throw Exception(result['message'] ?? 'Detection failed');
           }
         } else {
-          throw Exception(result['message'] ?? 'Detection failed');
+          throw Exception('Server error: ${response.statusCode}');
         }
-      } else {
-        throw Exception('Server error: ${response.statusCode}');
+      } catch (e) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          print("Retrying analysis ($retryCount/$maxRetries)...");
+          await performAnalysis();
+        } else {
+          rethrow;
+        }
       }
+    }
+
+    try {
+      await performAnalysis();
     } catch (e) {
       print("Analysis error: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        String errorMsg = e.toString().contains('TimeoutException') 
+          ? "Connection timed out. Please check your internet and try again." 
+          : "Scanning failed: ${e.toString()}";
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.redAccent,
+            action: SnackBarAction(
+              label: "Retry", 
+              textColor: Colors.white,
+              onPressed: () => _analyzeImage(image)
+            ),
+          )
+        );
       }
     } finally {
       if (mounted) {

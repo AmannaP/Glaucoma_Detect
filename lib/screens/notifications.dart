@@ -1,73 +1,110 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
+import 'package:intl/intl.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  List<Map<String, dynamic>> _notifications = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    final notes = await NotificationService.getNotifications();
+    if (mounted) {
+      setState(() {
+        _notifications = notes;
+        _isLoading = false;
+      });
+      NotificationService.markAllAsRead();
+    }
+  }
+
+  String _formatTime(String isoTime) {
+    final dateTime = DateTime.parse(isoTime);
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) return "Just now";
+    if (difference.inMinutes < 60) return "${difference.inMinutes}m ago";
+    if (difference.inHours < 24) return "${difference.inHours}h ago";
+    return DateFormat('MMM d, h:mm a').format(dateTime);
+  }
 
   @override
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF00C853);
     
-    // Mock notifications for now
-    final List<Map<String, String>> notifications = [
-      {
-        "title": "Welcome to Glaucoma Detect!",
-        "body": "Start your journey to better eye health today.",
-        "time": "Just now",
-        "type": "info"
-      },
-      {
-        "title": "New Scan Result available",
-        "body": "Your recent eye scan analysis is complete. View it now in History.",
-        "time": "2 hours ago",
-        "type": "alert"
-      },
-      {
-        "title": "Appointment Reminder",
-        "body": "You have an appointment with Dr. Alice Green tomorrow at 10:00 AM.",
-        "time": "Yesterday",
-        "type": "reminder"
-      },
-    ];
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text("Notifications"),
         backgroundColor: Colors.black,
         foregroundColor: primaryGreen,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              await NotificationService.clearNotifications();
+              _loadNotifications();
+            },
+          )
+        ],
       ),
-      body: notifications.isEmpty
-          ? const Center(
-              child: Text("No notifications yet", style: TextStyle(color: Colors.white70)),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: notifications.length,
-              separatorBuilder: (context, index) => const Divider(color: Colors.white10),
-              itemBuilder: (context, index) {
-                final note = notifications[index];
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: _getIconColor(note['type']!).withOpacity(0.1),
-                    child: Icon(_getIcon(note['type']!), color: _getIconColor(note['type']!)),
-                  ),
-                  title: Text(
-                    note['title']!,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+          : _notifications.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 4),
-                      Text(note['body']!, style: const TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 4),
-                      Text(note['time']!, style: const TextStyle(color: Colors.white30, fontSize: 12)),
+                      Icon(Icons.notifications_off_outlined, size: 60, color: Colors.white24),
+                      SizedBox(height: 16),
+                      Text("No notifications yet", style: TextStyle(color: Colors.white70)),
                     ],
                   ),
-                );
-              },
-            ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _notifications.length,
+                  separatorBuilder: (context, index) => const Divider(color: Colors.white10),
+                  itemBuilder: (context, index) {
+                    final note = _notifications[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: _getIconColor(note['type']!).withOpacity(0.1),
+                        child: Icon(_getIcon(note['type']!), color: _getIconColor(note['type']!)),
+                      ),
+                      title: Text(
+                        note['title']!,
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontWeight: note['isRead'] == true ? FontWeight.normal : FontWeight.bold
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(note['body']!, style: const TextStyle(color: Colors.white70)),
+                          const SizedBox(height: 4),
+                          Text(_formatTime(note['time']!), style: const TextStyle(color: Colors.white30, fontSize: 12)),
+                        ],
+                      ),
+                    );
+                  },
+                ),
     );
   }
 

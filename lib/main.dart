@@ -9,6 +9,8 @@ import 'screens/messages.dart';
 import 'screens/profile.dart';
 import 'screens/appointment_history.dart';
 import 'screens/notifications.dart';
+import 'screens/doctor_dashboard.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 late List<CameraDescription> cameras;
 
@@ -59,8 +61,10 @@ class EyeDetectApp extends StatelessWidget {
   }
 }
 
+
 class MainNavigationHolder extends StatefulWidget {
-  const MainNavigationHolder({super.key});
+  final String? initialRole;
+  const MainNavigationHolder({super.key, this.initialRole});
 
   @override
   State<MainNavigationHolder> createState() => _MainNavigationHolderState();
@@ -68,14 +72,62 @@ class MainNavigationHolder extends StatefulWidget {
 
 class _MainNavigationHolderState extends State<MainNavigationHolder> {
   int _selectedIndex = 0;
+  String _userRole = 'patient';
+  bool _isLoading = true;
 
-  static const List<Widget> _pages = [
-    HomeDashboard(),
-    ScanHistoryScreen(),
-    AppointmentHistoryScreen(),
-    RecommendationsScreen(),
-    ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    if (widget.initialRole != null) {
+      setState(() {
+        _userRole = widget.initialRole!.trim().toLowerCase();
+        _isLoading = false;
+      });
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userRole = (prefs.getString('user_role') ?? 'patient').trim().toLowerCase();
+      _isLoading = false;
+    });
+  }
+
+
+  List<Widget> _getPages() {
+    if (_userRole == 'doctor') {
+      return [
+        const DoctorDashboard(),
+        const ProfileScreen(),
+      ];
+    }
+    return [
+      const HomeDashboard(),
+      const ScanHistoryScreen(),
+      const AppointmentHistoryScreen(),
+      const RecommendationsScreen(),
+      const ProfileScreen(),
+    ];
+  }
+
+  List<BottomNavigationBarItem> _getNavItems() {
+    if (_userRole == 'doctor') {
+      return const [
+        BottomNavigationBarItem(icon: Icon(Icons.medical_services_outlined), activeIcon: Icon(Icons.medical_services), label: 'Practice'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+      ];
+    }
+    return const [
+      BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+      BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Scans'),
+      BottomNavigationBarItem(icon: Icon(Icons.event_note_outlined), activeIcon: Icon(Icons.event_note), label: 'Appointm...'),
+      BottomNavigationBarItem(icon: Icon(Icons.local_hospital_outlined), activeIcon: Icon(Icons.local_hospital), label: 'Doctors'),
+      BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -85,10 +137,39 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    
     const Color primaryGreen = Color(0xFF00C853);
+    final pages = _getPages();
+
+    String getTitle() {
+      if (_userRole == 'doctor') {
+        switch (_selectedIndex) {
+          case 0: return "Doctor Portal";
+          case 1: return "My Profile";
+          default: return "";
+        }
+      } else {
+        switch (_selectedIndex) {
+          case 1: return "Scan History";
+          case 2: return "Appointments";
+          case 3: return "Doctors & Pharmacies";
+          case 4: return "My Profile";
+          default: return "";
+        }
+      }
+    }
 
     return Scaffold(
-      body: _pages[_selectedIndex],
+      appBar: (_selectedIndex == 0)
+          ? null 
+          : AppBar(
+              title: Text(getTitle()),
+              backgroundColor: Colors.black,
+              foregroundColor: primaryGreen,
+              elevation: 0,
+            ),
+      body: pages[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -101,17 +182,13 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.black,
           selectedItemColor: primaryGreen,
+          unselectedLabelStyle: const TextStyle(fontSize: 10),
+          selectedLabelStyle: const TextStyle(fontSize: 10),
           unselectedItemColor: Colors.grey[600],
           showSelectedLabels: true,
           showUnselectedLabels: true,
           elevation: 10,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Scans'),
-            BottomNavigationBarItem(icon: Icon(Icons.event_note_outlined), activeIcon: Icon(Icons.event_note), label: 'Appointments'),
-            BottomNavigationBarItem(icon: Icon(Icons.local_hospital_outlined), activeIcon: Icon(Icons.local_hospital), label: 'Doctors'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-          ],
+          items: _getNavItems(),
         ),
       ),
     );

@@ -12,10 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $full_name = $data['full_name'];
             $email = $data['email'];
             $password = password_hash($data['password'], PASSWORD_DEFAULT);
-
+            $role = isset($data['role']) ? $data['role'] : 'patient';
             try {
-                $stmt = $conn->prepare("INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)");
-                $stmt->execute([$full_name, $email, $password]);
+                $stmt = $conn->prepare("INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$full_name, $email, $password, $role]);
                 echo json_encode(["status" => "success", "message" => "User registered successfully"]);
             } catch (PDOException $e) {
                 if ($e->getCode() == 23000) {
@@ -44,7 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "user" => [
                             "id" => $user['id'],
                             "full_name" => $user['full_name'],
-                            "email" => $user['email']
+                            "email" => $user['email'],
+                            "role" => isset($user['role']) ? $user['role'] : "patient"
                         ]
                     ]);
                 } else {

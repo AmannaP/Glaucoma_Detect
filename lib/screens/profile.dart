@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login.dart';
+import 'doctor_dashboard.dart';
+
+import 'notifications.dart';
+import 'scan_history.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,6 +16,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String _name = "Loading...";
   String _email = "Loading...";
+  String _role = "patient";
 
   @override
   void initState() {
@@ -24,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _name = prefs.getString('user_name') ?? "User";
       _email = prefs.getString('user_email') ?? "user@example.com";
+      _role = prefs.getString('user_role') ?? "patient";
     });
   }
 
@@ -42,15 +48,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF00C853);
     
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text("My Profile"),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: ListView(
+    return Material(
+      color: Colors.black,
+      child: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
           const SizedBox(height: 20),
@@ -69,46 +69,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           Center(
-            child: Text(
-              _email,
-              style: const TextStyle(color: Colors.white70),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(_email, style: const TextStyle(color: Colors.white70)),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (_role == 'doctor' ? Colors.blue : primaryGreen).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(_role.toUpperCase(), style: TextStyle(color: _role == 'doctor' ? Colors.blue : primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 40),
           const Divider(color: Colors.white10),
-          _buildSettingOption(Icons.lock_outline, 'Privacy Settings'),
-          _buildSettingOption(Icons.notifications_none, 'Notifications'),
-          _buildSettingOption(Icons.history, 'Download Records'),
-          _buildSettingOption(Icons.help_outline, 'Help & Support'),
-          const SizedBox(height: 40),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ElevatedButton.icon(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
-              label: const Text("Log Out"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent.withOpacity(0.1),
-                foregroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Colors.redAccent, width: 1),
-                ),
+          _buildSettingOption(Icons.lock_outline, 'Privacy Settings', () {}),
+          _buildSettingOption(Icons.notifications_none, 'Notifications', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+          }),
+          if (_role == 'patient') ...[
+            _buildSettingOption(Icons.description_outlined, 'My Prescriptions', () {
+              // Navigate to prescriptions list
+            }),
+            _buildSettingOption(Icons.history, 'Scan History', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanHistoryScreen()));
+            }),
+          ] else ...[
+            _buildSettingOption(Icons.business_center_outlined, 'Practice Settings', () {}),
+            _buildSettingOption(Icons.schedule, 'Manage Availability', () {}),
+          ],
+          _buildSettingOption(Icons.help_outline, 'Help & Support', () {}),
+        const SizedBox(height: 40),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ElevatedButton.icon(
+            onPressed: _logout,
+            icon: const Icon(Icons.logout),
+            label: const Text("Log Out"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withOpacity(0.1),
+              foregroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.redAccent, width: 1),
               ),
             ),
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+   );
   }
 
-  Widget _buildSettingOption(IconData icon, String title) {
+  Widget _buildSettingOption(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF00C853)),
       title: Text(title, style: const TextStyle(color: Colors.white)),
       trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-      onTap: () {},
+      onTap: onTap,
     );
   }
 }

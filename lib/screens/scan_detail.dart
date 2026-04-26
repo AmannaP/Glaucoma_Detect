@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'recommendations.dart';
 
 class ScanDetailScreen extends StatelessWidget {
   final Map<String, dynamic> scanData;
@@ -119,7 +120,7 @@ class ScanDetailScreen extends StatelessWidget {
                       height: 55,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // Navigate to Doctors tab
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendationsScreen()));
                         },
                         icon: const Icon(Icons.calendar_today),
                         label: const Text("Book a Consultation", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -130,6 +131,7 @@ class ScanDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                  const SizedBox(height: 50), // Extra space to avoid bottom nav overlap
                 ],
               ),
             ),

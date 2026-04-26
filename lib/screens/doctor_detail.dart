@@ -4,8 +4,9 @@ import 'login.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../main.dart';
 import 'messages.dart';
+import '../services/notification_service.dart';
+import 'video_call.dart';
 
 class DoctorDetailScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
@@ -40,7 +41,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     try {
       final dateStr = date.toIso8601String().split('T')[0];
       final response = await http.get(
-        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/appointments.php?doctor_name=${widget.doctor['name']}&date=$dateStr'),
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/appointments.php?doctor_name=${widget.doctor['name']}&date=$dateStr'),
       );
 
       if (response.statusCode == 200) {
@@ -73,7 +74,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
       final dateStr = _selectedDay!.toIso8601String().split('T')[0];
 
       final response = await http.post(
-        Uri.parse('http://169.239.251.102:280/~chika.amanna/glaucoma_backend/appointments.php'),
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/appointments.php'),
         body: json.encode({
           "user_id": userId,
           "doctor_name": widget.doctor['name'],
@@ -85,6 +86,12 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
       final result = json.decode(response.body);
       if (result['status'] == 'success') {
+        // Add real notification
+        await NotificationService.addNotification(
+          title: "Appointment Booked",
+          body: "Your appointment with ${widget.doctor['name']} on $dateStr at $_selectedTime has been confirmed.",
+          type: "reminder"
+        );
         _showBookingConfirmation();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'])));
@@ -158,10 +165,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           children: [
                             ElevatedButton.icon(
                               onPressed: () {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(
-                                  appBar: AppBar(title: Text(widget.doctor['name']), backgroundColor: Colors.black, foregroundColor: primaryGreen),
-                                  body: const MessagesScreen(),
-                                )));
+                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => MessagesScreen(doctorName: widget.doctor['name'])));
                               },
                               icon: const Icon(Icons.chat_bubble_outline, size: 18),
                               label: const Text("Message"),
@@ -174,9 +178,9 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                             ),
                             const SizedBox(width: 10),
                             IconButton(
-                              icon: const Icon(Icons.phone_outlined, color: Colors.white70),
+                              icon: const Icon(Icons.videocam_outlined, color: Colors.white70),
                               onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Calling...")));
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => VideoCallScreen(remoteName: widget.doctor['name'])));
                               },
                               style: IconButton.styleFrom(
                                 backgroundColor: const Color(0xFF131C24),
