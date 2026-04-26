@@ -380,12 +380,34 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
       return const Center(child: Text("No pharmacies found.", style: TextStyle(color: Colors.white54)));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _pharmacies.length,
-      itemBuilder: (context, index) {
-        final pharm = _pharmacies[index];
-        bool isTopRecommendation = index < 2;
+    // Limit to top 2 closest
+    final topPharmacies = _pharmacies.take(2).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Row(
+            children: [
+              const Icon(Icons.location_on, color: Color(0xFF00C853), size: 16),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  "Displaying top two closest pharmacies based on your location",
+                  style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: topPharmacies.length,
+            itemBuilder: (context, index) {
+              final pharm = topPharmacies[index];
+              bool isTopRecommendation = true; // Both are top now
 
         String distance = "Finding...";
         if (_currentPosition != null) {
@@ -454,6 +476,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
           ),
         );
       },
-    );
-  }
+    ),
+  ),
+],
+);
+}
 }

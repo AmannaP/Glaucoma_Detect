@@ -37,8 +37,8 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     super.initState();
     _initializeCamera();
     if (!widget.isIncoming) {
-      _startTimer();
-      _callStarted = true;
+      _sendSignal("[CALL_REQUEST]"); // Notify receiver
+      _startCallWaitPoller(); // Caller waits for acceptance
     }
   }
 
@@ -77,16 +77,91 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _signalingPoller?.cancel();
     _controller?.dispose();
     super.dispose();
   }
 
   // ─────────────────────────────────────────────────────────
-  // End-Call Logic
+  // Signaling Logic
   // ─────────────────────────────────────────────────────────
+
+  Timer? _signalingPoller;
+
+  void _startCallWaitPoller() {
+    _signalingPoller = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _checkCallResponse();
+    });
+  }
+
+  Future<void> _checkCallResponse() async {
+    final prefs = await SharedPreferences.getInstance();
+    final int? userId = prefs.getInt('user_id');
+    if (userId == null) return;
+
+    try {
+      final url = Uri.parse(
+        'http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/messages.php?action=fetch&user_id=$userId&other_name=${Uri.encodeComponent(widget.remoteName)}'
+      );
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          final List<dynamic> messages = data['messages'] ?? [];
+          if (messages.isEmpty) return;
+
+          final latest = messages.last;
+          final String content = latest['message'] ?? "";
+          final int senderId = latest['sender_id'];
+
+          if (senderId != userId) {
+            if (content.startsWith("[CALL_ACCEPTED]")) {
+              _signalingPoller?.cancel();
+              setState(() {
+                _callStarted = true;
+                _startTimer();
+              });
+            } else if (content.startsWith("[CALL_DECLINED]")) {
+              _signalingPoller?.cancel();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Call declined by user."), backgroundColor: Colors.red),
+                );
+                Navigator.pop(context);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  Future<void> _sendSignal(String signal) async {
+    final prefs = await SharedPreferences.getInstance();
+    final int? userId = prefs.getInt('user_id');
+    final String? otherName = widget.remoteName;
+    if (userId == null || otherName == null) return;
+
+    try {
+      await http.post(
+        Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/messages.php?action=send'),
+        body: json.encode({
+          "sender_id": userId,
+          "receiver_name": otherName,
+          "message": signal,
+        }),
+      );
+    } catch (e) { /* fail silent */ }
+  }
 
   Future<void> _onEndCall() async {
     _timer?.cancel();
+    _signalingPoller?.cancel();
+    
+    // Notify other end call ended
+    await _sendSignal("[CALL_DECLINED]");
+
     final prefs = await SharedPreferences.getInstance();
     final role = prefs.getString('user_role') ?? 'patient';
 
@@ -317,14 +392,20 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                         _buildCallAction(
                           icon: Icons.close,
                           color: Colors.red,
-                          onTap: () => Navigator.pop(context),
+                          onTap: () async {
+                            await _sendSignal("[CALL_DECLINED]");
+                            if (mounted) Navigator.pop(context);
+                          },
                         ),
                         _buildCallAction(
                           icon: Icons.videocam,
                           color: const Color(0xFF00C853),
-                          onTap: () {
-                            setState(() => _callStarted = true);
-                            _startTimer();
+                          onTap: () async {
+                            await _sendSignal("[CALL_ACCEPTED]");
+                            setState(() {
+                              _callStarted = true;
+                              _startTimer();
+                            });
                           },
                         ),
                       ],

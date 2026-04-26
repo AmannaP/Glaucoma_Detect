@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_service.dart';
+import 'navigation_service.dart';
+import '../screens/video_call.dart';
 
 class MessagePollerService {
   MessagePollerService._internal();
@@ -13,17 +16,11 @@ class MessagePollerService {
   final Set<int> _seenMessageIds = {};
   bool _isPolling = false;
 
-  final List<String> _doctors = [
-    "Dr. Alice Green",
-    "Dr. Bob White",
-    "Dr. Clara Reed",
-  ];
-
   void startPolling() {
     if (_isPolling) return;
     _isPolling = true;
     
-    // Poll every 10 seconds (less aggressive than chat screen)
+    // Poll every 10 seconds
     _poller = Timer.periodic(const Duration(seconds: 10), (_) {
        _checkNewMessages();
        _checkNewAppointments();
@@ -57,13 +54,10 @@ class MessagePollerService {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
           final List<dynamic> appointments = data['appointments'] ?? [];
-          if (appointments.isEmpty) return;
-
           for (var appt in appointments) {
             final int apptId = int.tryParse(appt['id'].toString()) ?? 0;
             if (!_seenAppointmentIds.contains(apptId)) {
               if (_seenAppointmentIds.isNotEmpty) {
-                // Notify doctor of new appointment
                 NotificationService().showInfoNotification(
                   title: "🗓️ New Consultation Scheduled",
                   body: "Patient ${appt['patient_name']} has booked an appointment for ${appt['date']} at ${appt['time']}.",
@@ -74,20 +68,36 @@ class MessagePollerService {
           }
         }
       }
-    } catch (e) {
-      // Background fail
-    }
+    } catch (e) { /* background fail */ }
   }
 
   Future<void> _checkNewMessages() async {
     final prefs = await SharedPreferences.getInstance();
     final int? userId = prefs.getInt('user_id');
+    final String userName = prefs.getString('user_name') ?? "";
     if (userId == null) return;
 
-    for (final doctorName in _doctors) {
+    // Fetch all specialists to check chats from
+    List<String> chatPartners = [];
+    try {
+      final docResp = await http.get(Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/auth.php?action=fetch_doctors'));
+      if (docResp.statusCode == 200) {
+        final docData = json.decode(docResp.body);
+        if (docData['status'] == 'success') {
+          for (var d in docData['doctors']) {
+            if (d['name'] != userName) chatPartners.add(d['name']);
+          }
+        }
+      }
+    } catch (e) { /* fallback to recent chats logic or empty */ }
+
+    // If I'm a doctor, I also need to check messages from patients I've interacted with.
+    // For simplicity in this signaling demo, we poll all known doctors.
+    
+    for (final partnerName in chatPartners) {
       try {
         final url = Uri.parse(
-          'http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/messages.php?action=fetch&user_id=$userId&other_name=${Uri.encodeComponent(doctorName)}'
+          'http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/messages.php?action=fetch&user_id=$userId&other_name=${Uri.encodeComponent(partnerName)}'
         );
         final response = await http.get(url);
 
@@ -100,30 +110,44 @@ class MessagePollerService {
             final latestMsg = messages.last;
             final int msgId = latestMsg['id'];
             final int senderId = latestMsg['sender_id'];
+            final String content = latestMsg['message'] ?? "";
 
-            // Only notify if:
-            // 1. It's from the other person
-            // 2. We haven't seen this ID in this session
-            // 3. This isn't the first time we're seeing ANY messages (avoid notification flood on startup)
             if (senderId != userId && !_seenMessageIds.contains(msgId)) {
               if (_seenMessageIds.isNotEmpty) {
-                NotificationService().showMessageNotification(
-                  senderName: doctorName,
-                  messagePreview: latestMsg['message'] ?? "New message",
-                );
+                // 1. CHECK FOR CALL SIGNAL
+                if (content.startsWith("[CALL_REQUEST]")) {
+                  _triggerIncomingCall(partnerName);
+                } 
+                // 2. CHECK FOR REGULAR MESSAGE
+                else if (!content.startsWith("[CALL_")) {
+                  NotificationService().showMessageNotification(
+                    senderName: partnerName,
+                    messagePreview: content,
+                  );
+                }
               }
               _seenMessageIds.add(msgId);
             }
             
-            // Populate seen IDs on first run
-            for (var m in messages) {
-               _seenMessageIds.add(m['id']);
-            }
+            for (var m in messages) _seenMessageIds.add(m['id']);
           }
         }
-      } catch (e) {
-        // Silently fail for background polling
-      }
+      } catch (e) { /* silently fail */ }
+    }
+  }
+
+  void _triggerIncomingCall(String remoteName) {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VideoCallScreen(
+            remoteName: remoteName,
+            isIncoming: true,
+          ),
+        ),
+      );
     }
   }
 }
