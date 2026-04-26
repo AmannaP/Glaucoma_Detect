@@ -15,16 +15,16 @@ class LandingPage extends StatelessWidget {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30.0),
+            padding: const EdgeInsets.symmetric(horizontal: 3.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 // Logo and Brand Name
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(color: primaryGreen, width: 2),
@@ -32,7 +32,7 @@ class LandingPage extends StatelessWidget {
                       child: const Text(
                         'G',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 40,
                           fontWeight: FontWeight.bold,
                           color: primaryGreen,
                         ),
@@ -42,20 +42,20 @@ class LandingPage extends StatelessWidget {
                     const Text(
                       'Glaucoma Detect',
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        fontFamily: 'serif', // Trying to match the 'phygo' serif look
+                        fontFamily: 'serif', 
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 60),
+                const SizedBox(height: 20),
                 // Header
                 const Text(
                   'Services we offer',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -69,21 +69,21 @@ class LandingPage extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 
                 // Services List
                 _buildPermissionItem(
                   icon: Icons.remove_red_eye_outlined,
                   title: 'AI Eye Scanning',
-                  subtitle: 'Automated detection using advanced neural networks',
+                  subtitle: 'Automated detection using hard coded algorithms.',
                   primaryColor: primaryGreen,
                   cardBg: cardBg,
                 ),
                 const SizedBox(height: 16),
                 _buildPermissionItem(
                   icon: Icons.analytics_outlined,
-                  title: 'Progress Tracking',
-                  subtitle: 'Monitor your eye health journey over time',
+                  title: 'Purchase Prescriptions',
+                  subtitle: 'Order prescription from pharmacies closeby.',
                   primaryColor: primaryGreen,
                   cardBg: cardBg,
                 ),
@@ -91,7 +91,7 @@ class LandingPage extends StatelessWidget {
                 _buildPermissionItem(
                   icon: Icons.chat_bubble_outline,
                   title: 'Doctor Consultations',
-                  subtitle: 'Connect with specialists for expert advice',
+                  subtitle: 'Connect with specialists for expert advice.',
                   primaryColor: primaryGreen,
                   cardBg: cardBg,
                 ),
@@ -112,13 +112,15 @@ class LandingPage extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _buildResourceTag('On-device AI', primaryGreen),
+                    _buildResourceTag('Camera Hardware', primaryGreen),
+                    _buildResourceTag('GPS Location', primaryGreen),
+                    _buildResourceTag('Local Notifications', primaryGreen),
                     _buildResourceTag('Secure Local Storage', primaryGreen),
-                    _buildResourceTag('Offline Access', primaryGreen),
+                    _buildResourceTag('File System (PDF)', primaryGreen),
                   ],
                 ),
                 
-                const SizedBox(height: 60),
+                const SizedBox(height: 30),
                 
                 // Buttons
                 SizedBox(
@@ -248,4 +250,4 @@ class LandingPage extends StatelessWidget {
       ),
     );
   }
-}
+}

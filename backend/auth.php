@@ -57,6 +57,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             echo json_encode(["status" => "error", "message" => "Missing required fields"]);
         }
+    } elseif ($action === 'check_email') {
+        if (isset($data['email'])) {
+            $email = $data['email'];
+            try {
+                $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+                $stmt->execute([$email]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($user) {
+                    echo json_encode(["status" => "success", "message" => "Email found"]);
+                } else {
+                    echo json_encode(["status" => "error", "message" => "No account found with this email"]);
+                }
+            } catch (PDOException $e) {
+                echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            }
+        }
+    } elseif ($action === 'reset_password') {
+        if (isset($data['email'], $data['new_password'])) {
+            $email = $data['email'];
+            $new_password = password_hash($data['new_password'], PASSWORD_DEFAULT);
+            try {
+                $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+                $stmt->execute([$new_password, $email]);
+                echo json_encode(["status" => "success", "message" => "Password updated successfully"]);
+            } catch (PDOException $e) {
+                echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            }
+        }
     } else {
         echo json_encode(["status" => "error", "message" => "Invalid action"]);
     }

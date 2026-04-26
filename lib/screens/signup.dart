@@ -21,12 +21,10 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   Future<void> _signUp() async {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please agree to terms and conditions")));
@@ -105,10 +103,43 @@ class _SignUpPageState extends State<SignUpPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: Column(
+          child: Form(
+            key: _formKey,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
+              // Logo and Brand Name
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: primaryGreen, width: 2),
+                    ),
+                    child: const Text(
+                      'G',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: primaryGreen,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Glaucoma Detect',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'serif', 
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
               GestureDetector(
                 onLongPress: () {
                   setState(() {
@@ -124,7 +155,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 child: Text(
                   'Create Account',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 25,
                     fontWeight: FontWeight.bold,
                     color: _isDoctor ? primaryGreen : Colors.white,
                   ),
@@ -138,9 +169,8 @@ class _SignUpPageState extends State<SignUpPage> {
                   color: Colors.white60,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               
-              // Name Field
               _buildTextField(
                 label: 'Full Name',
                 hint: 'Enter your name',
@@ -148,10 +178,13 @@ class _SignUpPageState extends State<SignUpPage> {
                 controller: _nameController,
                 cardBg: cardBg,
                 primaryColor: primaryGreen,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Please enter your name';
+                  if (value.length < 3) return 'Name is too short';
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
-              
-              // Email Field
               _buildTextField(
                 label: 'Email',
                 hint: 'Enter your email',
@@ -159,10 +192,13 @@ class _SignUpPageState extends State<SignUpPage> {
                 controller: _emailController,
                 cardBg: cardBg,
                 primaryColor: primaryGreen,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Please enter your email';
+                  if (!value.contains('@')) return 'Please enter a valid email';
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
-              
-              // Password Field
               _buildTextField(
                 label: 'Password',
                 hint: 'Create a password',
@@ -171,12 +207,15 @@ class _SignUpPageState extends State<SignUpPage> {
                 obscureText: _obscureText,
                 controller: _passwordController,
                 onTogglePassword: () {
-                  setState(() {
-                    _obscureText = !_obscureText;
-                  });
+                  setState(() => _obscureText = !_obscureText);
                 },
                 cardBg: cardBg,
                 primaryColor: primaryGreen,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Please enter a password';
+                  if (value.length < 6) return 'Password must be at least 6 characters';
+                  return null;
+                },
               ),
               
               const SizedBox(height: 20),
@@ -247,7 +286,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
               ),
               
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               
               // Sign In link
               Row(
@@ -275,8 +314,9 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTextField({
     required String label,
@@ -288,6 +328,7 @@ class _SignUpPageState extends State<SignUpPage> {
     required TextEditingController controller,
     required Color cardBg,
     required Color primaryColor,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,32 +342,40 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: isPassword && obscureText,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.white24),
-              prefixIcon: Icon(icon, color: Colors.white30),
-              suffixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        obscureText ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white30,
-                      ),
-                      onPressed: onTogglePassword,
-                    )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword && obscureText,
+          style: const TextStyle(color: Colors.white),
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white24),
+            prefixIcon: Icon(icon, color: Colors.white30),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white30,
+                    ),
+                    onPressed: onTogglePassword,
+                  )
+                : null,
+            filled: true,
+            fillColor: cardBg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.white10),
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.white10),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+            ),
+            errorStyle: const TextStyle(color: Colors.redAccent),
+            contentPadding: const EdgeInsets.all(16),
           ),
         ),
       ],

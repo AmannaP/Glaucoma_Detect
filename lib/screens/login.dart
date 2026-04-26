@@ -17,12 +17,10 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   Future<void> _login() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isLoading = true;
@@ -95,6 +93,129 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  void _showForgotPasswordDialog() {
+    final TextEditingController emailResetController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+    bool emailVerified = false;
+    bool isResetting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF131C24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              emailVerified ? "Reset Password" : "Forgot Password",
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!emailVerified) ...[
+                  const Text("Enter your registered email to reset your password.", style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: emailResetController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "Email address",
+                      hintStyle: const TextStyle(color: Colors.white24),
+                      prefixIcon: const Icon(Icons.email, color: Color(0xFF00C853)),
+                      filled: true,
+                      fillColor: Colors.black12,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                ] else ...[
+                  const Text("Enter your new password below.", style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: newPasswordController,
+                    obscureText: true,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "New Password",
+                      hintStyle: const TextStyle(color: Colors.white24),
+                      prefixIcon: const Icon(Icons.lock, color: Color(0xFF00C853)),
+                      filled: true,
+                      fillColor: Colors.black12,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+              ),
+              if (isResetting)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00C853))),
+                )
+              else
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C853), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                  onPressed: () async {
+                    if (!emailVerified) {
+                      // Step 1: Check Email
+                      if (emailResetController.text.isEmpty) return;
+                      setDialogState(() => isResetting = true);
+                      try {
+                        final resp = await http.post(
+                          Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/auth.php?action=check_email'),
+                          body: json.encode({"email": emailResetController.text.trim()}),
+                        );
+                        final data = json.decode(resp.body);
+                        if (data['status'] == 'success') {
+                          setDialogState(() {
+                            emailVerified = true;
+                            isResetting = false;
+                          });
+                        } else {
+                          setDialogState(() => isResetting = false);
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
+                        }
+                      } catch (e) {
+                        setDialogState(() => isResetting = false);
+                      }
+                    } else {
+                      // Step 2: Reset Password
+                      if (newPasswordController.text.isEmpty) return;
+                      setDialogState(() => isResetting = true);
+                      try {
+                        final resp = await http.post(
+                          Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/auth.php?action=reset_password'),
+                          body: json.encode({
+                            "email": emailResetController.text.trim(),
+                            "new_password": newPasswordController.text.trim()
+                          }),
+                        );
+                        final data = json.decode(resp.body);
+                        if (data['status'] == 'success') {
+                          if (mounted) Navigator.pop(ctx);
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password reset successfully!"), backgroundColor: Color(0xFF00C853)));
+                        } else {
+                          setDialogState(() => isResetting = false);
+                        }
+                      } catch (e) {
+                        setDialogState(() => isResetting = false);
+                      }
+                    }
+                  },
+                  child: Text(emailVerified ? "Reset" : "Verify Email", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color primaryGreen = Color(0xFF00C853);
@@ -113,14 +234,47 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: Column(
+          child: Form(
+            key: _formKey,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 20),
+              // Logo and Brand Name
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: primaryGreen, width: 2),
+                    ),
+                    child: const Text(
+                      'G',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: primaryGreen,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Glaucoma Detect',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'serif', 
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
               const Text(
                 'Sign In',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 25,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -133,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
                   color: Colors.white60,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               
               // Email Field
               _buildTextField(
@@ -143,10 +297,13 @@ class _LoginPageState extends State<LoginPage> {
                 controller: _emailController,
                 cardBg: cardBg,
                 primaryColor: primaryGreen,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Please enter your email';
+                  if (!value.contains('@')) return 'Please enter a valid email';
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
-              
-              // Password Field
               _buildTextField(
                 label: 'Password',
                 hint: 'Enter your password',
@@ -155,19 +312,22 @@ class _LoginPageState extends State<LoginPage> {
                 obscureText: _obscureText,
                 controller: _passwordController,
                 onTogglePassword: () {
-                  setState(() {
-                    _obscureText = !_obscureText;
-                  });
+                  setState(() => _obscureText = !_obscureText);
                 },
                 cardBg: cardBg,
                 primaryColor: primaryGreen,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Please enter your password';
+                  if (value.length < 6) return 'Password must be at least 6 characters';
+                  return null;
+                },
               ),
               
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: _showForgotPasswordDialog,
                   child: const Text(
                     'Forgot Password?',
                     style: TextStyle(color: primaryGreen),
@@ -229,8 +389,9 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTextField({
     required String label,
@@ -242,6 +403,7 @@ class _LoginPageState extends State<LoginPage> {
     required TextEditingController controller,
     required Color cardBg,
     required Color primaryColor,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,32 +417,40 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: isPassword && obscureText,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.white24),
-              prefixIcon: Icon(icon, color: Colors.white30),
-              suffixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        obscureText ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white30,
-                      ),
-                      onPressed: onTogglePassword,
-                    )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword && obscureText,
+          style: const TextStyle(color: Colors.white),
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white24),
+            prefixIcon: Icon(icon, color: Colors.white30),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white30,
+                    ),
+                    onPressed: onTogglePassword,
+                  )
+                : null,
+            filled: true,
+            fillColor: cardBg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.white10),
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.white10),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+            ),
+            errorStyle: const TextStyle(color: Colors.redAccent),
+            contentPadding: const EdgeInsets.all(16),
           ),
         ),
       ],
