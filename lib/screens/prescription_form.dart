@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
+import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 
 class PrescriptionFormScreen extends StatefulWidget {
@@ -249,11 +250,35 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
       });
       await prefs.setString('doctor_prescriptions', json.encode(doctorPrescriptions));
 
-      // Push notification to the patient
+      // Push notification locally for the doctor
       await NotificationService().showInfoNotification(
-        title: "📄 New Prescription Issued",
-        body: "A new prescription for '${_diagnosisController.text}' has been sent to your profile.",
+        title: "📄 Prescription Generated",
+        body: "A new prescription for '${_diagnosisController.text}' has been saved.",
       );
+
+      // SEND TO PATIENT VIA BACKEND
+      try {
+        final int? doctorId = prefs.getInt('user_id');
+        if (doctorId != null) {
+          final prescriptionPayload = {
+            "date": dateStr,
+            "diagnosis": _diagnosisController.text,
+            "medication": _medicationController.text,
+            "instructions": _instructionsController.text,
+          };
+          
+          await http.post(
+            Uri.parse('http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/messages.php?action=send'),
+            body: json.encode({
+              "sender_id": doctorId,
+              "receiver_name": widget.patientName,
+              "message": "[PRESCRIPTION_DATA]${json.encode(prescriptionPayload)}",
+            }),
+          );
+        }
+      } catch (e) {
+        debugPrint("Error sending prescription signal: $e");
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

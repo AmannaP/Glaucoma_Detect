@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:open_file/open_file.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
 
 class PrescriptionsListScreen extends StatefulWidget {
   const PrescriptionsListScreen({super.key});
@@ -118,13 +120,74 @@ class _PrescriptionsListScreenState extends State<PrescriptionsListScreen> {
             if (filePath.isNotEmpty && await File(filePath).exists()) {
               await OpenFile.open(filePath);
             } else {
+              // PDF is missing (possibly received via cross-device sync)
+              // Let's generate it now!
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("File not found on this device."))
+                const SnackBar(content: Text("Generating PDF document..."))
               );
+              await _generatePdfOnDemand(item);
             }
           },
         ),
       ),
     );
+  }
+
+  Future<void> _generatePdfOnDemand(Map<String, dynamic> item) async {
+    try {
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text("Glaucoma Detect - Medical Prescription", style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 20),
+              pw.Text("Patient: Prescription History", style: const pw.TextStyle(fontSize: 18)),
+              pw.Text("Doctor: ${item['doctorName'] ?? 'Specialist'}", style: const pw.TextStyle(fontSize: 14)),
+              pw.Text("Date: ${item['date']}", style: const pw.TextStyle(fontSize: 14)),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+              pw.Text("Diagnosis:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.Text(item['diagnosis'] ?? "", style: const pw.TextStyle(fontSize: 14)),
+              pw.SizedBox(height: 20),
+              pw.Text("Medication:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.Text(item['medication'] ?? "Consult doctor", style: const pw.TextStyle(fontSize: 14)),
+              pw.SizedBox(height: 20),
+              pw.Text("Instructions:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.Text(item['instructions'] ?? "None", style: const pw.TextStyle(fontSize: 14)),
+              pw.Spacer(),
+              pw.Divider(),
+              pw.Text("Electronically signed", style: pw.TextStyle(fontStyle: pw.FontStyle.italic)),
+            ],
+          ),
+        ),
+      );
+
+      final output = await getApplicationDocumentsDirectory();
+      final String fileName = "prescription_${item['diagnosis'].toString().replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf";
+      final file = File("${output.path}/$fileName");
+      await file.writeAsBytes(await pdf.save());
+
+      // Update the filePath in shared prefs so we don't have to generate it again
+      final prefs = await SharedPreferences.getInstance();
+      final String? data = prefs.getString('patient_prescriptions');
+      if (data != null) {
+        List<dynamic> list = json.decode(data);
+        for (var p in list) {
+          if (p['date'] == item['date'] && p['diagnosis'] == item['diagnosis']) {
+            p['filePath'] = file.path;
+          }
+        }
+        await prefs.setString('patient_prescriptions', json.encode(list));
+      }
+
+      await OpenFile.open(file.path);
+      _loadPrescriptions(); // Refresh UI
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("PDF generation failed: $e")));
+      }
+    }
   }
 }
