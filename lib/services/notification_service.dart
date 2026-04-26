@@ -5,6 +5,8 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../screens/messages.dart';
+import 'navigation_service.dart';
 
 /// Singleton notification service.
 /// Handles:
@@ -18,6 +20,9 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   static const String _storageKey = 'persistent_notifications';
+  
+  // Real-time unread count
+  final ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(0);
 
   // Notification IDs  (use fixed IDs per type to avoid duplication)
   static const int _messageChannelId = 1000;
@@ -41,15 +46,30 @@ class NotificationService {
   Future<void> initialize() async {
     tz.initializeTimeZones();
     try {
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      final timezoneInfo = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier));
     } catch (e) {
       debugPrint("Could not set local timezone: $e");
     }
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidSettings);
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        // Handle notification tap
+        if (response.payload != null) {
+          final data = json.decode(response.payload!);
+          if (data['type'] == 'chat' && data['doctorName'] != null) {
+            NavigationService.navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => MessagesScreen(doctorName: data['doctorName']),
+              ),
+            );
+          }
+        }
+      },
+    );
 
     // Create the notification channels on Android
     final androidPlugin = _plugin
@@ -60,6 +80,9 @@ class NotificationService {
     // Request permission (Android 13+)
     await androidPlugin?.requestNotificationsPermission();
     await androidPlugin?.requestExactAlarmsPermission();
+
+    // Initialize the notifier with current count
+    unreadCountNotifier.value = await getUnreadCount();
   }
 
   // ─────────────────────────────────────────────────────────
@@ -82,10 +105,14 @@ class NotificationService {
       ),
     );
     await _plugin.show(
-      _messageChannelId,
-      '💬 New message from $senderName',
-      messagePreview,
-      details,
+      id: _messageChannelId,
+      title: '💬 New message from $senderName',
+      body: messagePreview,
+      notificationDetails: details,
+      payload: json.encode({
+        "type": "chat",
+        "doctorName": senderName,
+      }),
     );
     await _addToHistory(
       title: 'New message from $senderName',
@@ -109,7 +136,7 @@ class NotificationService {
         icon: '@mipmap/ic_launcher',
       ),
     );
-    await _plugin.show(_messageChannelId + 1, title, body, details);
+    await _plugin.show(id: _messageChannelId + 1, title: title, body: body, notificationDetails: details);
     await _addToHistory(title: title, body: body, type: 'info');
   }
 
@@ -187,11 +214,11 @@ class NotificationService {
       ),
     );
     await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledTime,
-      details,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledTime,
+      notificationDetails: details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
@@ -199,7 +226,7 @@ class NotificationService {
   /// Cancel all scheduled reminders for a given appointment.
   Future<void> cancelConsultationReminders(int appointmentId) async {
     for (int i = 1; i <= 3; i++) {
-      await _plugin.cancel(_reminderBaseId + (appointmentId * 10) + i);
+      await _plugin.cancel(id: _reminderBaseId + (appointmentId * 10) + i);
     }
   }
 
@@ -225,6 +252,9 @@ class NotificationService {
     // Keep max 50 notifications
     if (notifications.length > 50) notifications = notifications.sublist(0, 50);
     await prefs.setString(_storageKey, json.encode(notifications));
+    
+    // Update live notifier
+    unreadCountNotifier.value = await getUnreadCount();
   }
 
   static Future<List<Map<String, dynamic>>> getNotifications() async {
@@ -249,11 +279,13 @@ class NotificationService {
       note['isRead'] = true;
     }
     await prefs.setString(_storageKey, json.encode(notifications));
+    NotificationService().unreadCountNotifier.value = 0;
   }
 
   static Future<void> clearNotifications() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
+    NotificationService().unreadCountNotifier.value = 0;
   }
 
   // ─────────────────────────────────────────────────────────

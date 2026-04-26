@@ -61,50 +61,52 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           )
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryGreen))
-          : _notifications.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.notifications_off_outlined, size: 60, color: Colors.white24),
-                      SizedBox(height: 16),
-                      Text("No notifications yet", style: TextStyle(color: Colors.white70)),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _notifications.length,
-                  separatorBuilder: (context, index) => const Divider(color: Colors.white10),
-                  itemBuilder: (context, index) {
-                    final note = _notifications[index];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        backgroundColor: _getIconColor(note['type']!).withOpacity(0.1),
-                        child: Icon(_getIcon(note['type']!), color: _getIconColor(note['type']!)),
-                      ),
-                      title: Text(
-                        note['title']!,
-                        style: TextStyle(
-                          color: Colors.white, 
-                          fontWeight: note['isRead'] == true ? FontWeight.normal : FontWeight.bold
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+            : _notifications.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.notifications_off_outlined, size: 60, color: Colors.white24),
+                        SizedBox(height: 16),
+                        Text("No notifications yet", style: TextStyle(color: Colors.white70)),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _notifications.length,
+                    separatorBuilder: (context, index) => const Divider(color: Colors.white10),
+                    itemBuilder: (context, index) {
+                      final note = _notifications[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: _getIconColor(note['type']!).withOpacity(0.1),
+                          child: Icon(_getIcon(note['type']!), color: _getIconColor(note['type']!)),
                         ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(note['body']!, style: const TextStyle(color: Colors.white70)),
-                          const SizedBox(height: 4),
-                          Text(_formatTime(note['time']!), style: const TextStyle(color: Colors.white30, fontSize: 12)),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        title: Text(
+                          note['title']!,
+                          style: TextStyle(
+                            color: Colors.white, 
+                            fontWeight: note['isRead'] == true ? FontWeight.normal : FontWeight.bold
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(note['body']!, style: const TextStyle(color: Colors.white70)),
+                            const SizedBox(height: 4),
+                            Text(_formatTime(note['time']!), style: const TextStyle(color: Colors.white30, fontSize: 12)),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 

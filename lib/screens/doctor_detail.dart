@@ -142,8 +142,9 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
         foregroundColor: primaryGreen,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Doctor Info Header
@@ -364,7 +365,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             const SizedBox(height: 30),
           ],
         ),
-      ),
+      )),
     );
   }
 

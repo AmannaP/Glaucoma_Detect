@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login.dart';
-import 'doctor_dashboard.dart';
-
 import 'notifications.dart';
 import 'scan_history.dart';
+import 'prescriptions_list.dart';
+import 'doctor_prescriptions.dart';
+import 'coming_soon.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -48,82 +49,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF00C853);
     
-    return Material(
-      color: Colors.black,
-      child: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          const SizedBox(height: 20),
-          Center(
-            child: CircleAvatar(
-              radius: 50,
-              backgroundColor: primaryGreen.withOpacity(0.1),
-              child: const Icon(Icons.person, size: 60, color: primaryGreen),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              _name,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(_email, style: const TextStyle(color: Colors.white70)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: (_role == 'doctor' ? Colors.blue : primaryGreen).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Text(_role.toUpperCase(), style: TextStyle(color: _role == 'doctor' ? Colors.blue : primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 40),
-          const Divider(color: Colors.white10),
-          _buildSettingOption(Icons.lock_outline, 'Privacy Settings', () {}),
-          _buildSettingOption(Icons.notifications_none, 'Notifications', () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-          }),
-          if (_role == 'patient') ...[
-            _buildSettingOption(Icons.description_outlined, 'My Prescriptions', () {
-              // Navigate to prescriptions list
-            }),
-            _buildSettingOption(Icons.history, 'Scan History', () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanHistoryScreen()));
-            }),
-          ] else ...[
-            _buildSettingOption(Icons.business_center_outlined, 'Practice Settings', () {}),
-            _buildSettingOption(Icons.schedule, 'Manage Availability', () {}),
-          ],
-          _buildSettingOption(Icons.help_outline, 'Help & Support', () {}),
-        const SizedBox(height: 40),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ElevatedButton.icon(
-            onPressed: _logout,
-            icon: const Icon(Icons.logout),
-            label: const Text("Log Out"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent.withOpacity(0.1),
-              foregroundColor: Colors.redAccent,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Colors.redAccent, width: 1),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            const SizedBox(height: 20),
+            Center(
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: primaryGreen.withOpacity(0.1),
+                child: const Icon(Icons.person, size: 60, color: primaryGreen),
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                _name,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ),
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_email, style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (_role == 'doctor' ? Colors.blue : primaryGreen).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(_role.toUpperCase(), style: TextStyle(color: _role == 'doctor' ? Colors.blue : primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 40),
+            const Divider(color: Colors.white10),
+            _buildSettingOption(Icons.notifications_none, 'Notifications', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+            }),
+            if (_role == 'patient') ...[
+              _buildSettingOption(Icons.description_outlined, 'My Prescriptions', () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const PrescriptionsListScreen()));
+              }),
+              _buildSettingOption(Icons.history, 'Scan History', () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanHistoryScreen()));
+              }),
+            ] else ...[
+              _buildSettingOption(Icons.description_outlined, 'Issued Prescriptions', () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const DoctorPrescriptionsScreen()));
+              }),
+              _buildSettingOption(Icons.business_center_outlined, 'Practice Settings', () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ComingSoonScreen(featureName: "Practice Settings")));
+              }),
+              _buildSettingOption(Icons.schedule, 'Manage Availability', () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ComingSoonScreen(featureName: "Manage Availability")));
+              }),
+            ],
+            _buildSettingOption(Icons.help_outline, 'Help & Support', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ComingSoonScreen(featureName: "Help & Support")));
+            }),
+            const SizedBox(height: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ElevatedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout),
+                label: const Text("Log Out"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent.withOpacity(0.1),
+                  foregroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Colors.redAccent, width: 1),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
-   );
+      ),
+    );
   }
 
   Widget _buildSettingOption(IconData icon, String title, VoidCallback onTap) {

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class MessagesScreen extends StatefulWidget {
   final String doctorName;
@@ -19,6 +20,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Timer? _pollingTimer;
   int? _currentUserId;
   bool _isLoading = true;
+  int? _lastMessageId;
 
   @override
   void initState() {
@@ -62,9 +64,26 @@ class _MessagesScreenState extends State<MessagesScreen> {
         if (data['status'] == 'success') {
           final List<dynamic> newMessages = data['messages'] ?? [];
           if (mounted) {
+            // If we have a lastMessageId, it means this isn't the first load
+            // So any NEW message from the other person should trigger a notification
+            if (_lastMessageId != null && newMessages.isNotEmpty) {
+              final latestMsg = newMessages.last;
+              final isOtherPerson = latestMsg["sender_id"] != _currentUserId && latestMsg["sender_name"] != "Me";
+              
+              if (isOtherPerson && latestMsg["id"] != _lastMessageId) {
+                NotificationService().showMessageNotification(
+                  senderName: widget.doctorName,
+                  messagePreview: latestMsg["message"] ?? "New message",
+                );
+              }
+            }
+
             setState(() {
               _messages = newMessages;
               _isLoading = false;
+              if (newMessages.isNotEmpty) {
+                _lastMessageId = newMessages.last["id"];
+              }
             });
             if (autoScroll && newMessages.isNotEmpty) {
               _scrollToBottom();

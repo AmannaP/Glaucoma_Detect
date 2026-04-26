@@ -13,6 +13,7 @@ class AppointmentHistoryScreen extends StatefulWidget {
 }
 
 class _AppointmentHistoryScreenState extends State<AppointmentHistoryScreen> {
+  static const primaryGreen = Color(0xFF00C853);
   List<dynamic> upcomingAppointments = [];
   List<dynamic> pastAppointments = [];
   bool isLoading = true;
@@ -90,35 +91,38 @@ class _AppointmentHistoryScreenState extends State<AppointmentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryGreen = Color(0xFF00C853);
-
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          Container(
-            color: Colors.black,
-            child: const TabBar(
-              indicatorColor: primaryGreen,
-              labelColor: primaryGreen,
-              unselectedLabelColor: Colors.white60,
-              tabs: [
-                Tab(text: "Upcoming"),
-                Tab(text: "Past"),
-              ],
-            ),
-          ),
-          Expanded(
-            child: isLoading 
-              ? const Center(child: CircularProgressIndicator(color: primaryGreen))
-              : TabBarView(
-                  children: [
-                    _buildAppointmentList(upcomingAppointments, isUpcoming: true),
-                    _buildAppointmentList(pastAppointments, isUpcoming: false),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: DefaultTabController(
+          length: 2,
+          child: Column(
+            children: [
+              Container(
+                color: Colors.black,
+                child: const TabBar(
+                  indicatorColor: primaryGreen,
+                  labelColor: primaryGreen,
+                  unselectedLabelColor: Colors.white60,
+                  tabs: [
+                    Tab(text: "Upcoming"),
+                    Tab(text: "Past"),
                   ],
                 ),
+              ),
+              Expanded(
+                child: isLoading 
+                  ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+                  : TabBarView(
+                      children: [
+                        _buildAppointmentList(upcomingAppointments, isUpcoming: true),
+                        _buildAppointmentList(pastAppointments, isUpcoming: false),
+                      ],
+                    ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

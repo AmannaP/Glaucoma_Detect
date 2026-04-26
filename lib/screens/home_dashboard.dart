@@ -96,32 +96,37 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ),
                   ],
                 ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
-                  },
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundColor: primaryGreen.withOpacity(0.1),
-                        child: const Icon(Icons.person, color: primaryGreen),
-                      ),
-                      if (_unreadCount > 0)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            child: Text(
-                              _unreadCount.toString(), 
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
-                            ),
+                ValueListenableBuilder<int>(
+                  valueListenable: NotificationService().unreadCountNotifier,
+                  builder: (context, unreadCount, _) {
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                      },
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 25,
+                            backgroundColor: primaryGreen.withOpacity(0.1),
+                            child: const Icon(Icons.notifications, color: primaryGreen),
                           ),
-                        )
-                    ],
-                  ),
+                          if (unreadCount > 0)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                child: Text(
+                                  unreadCount.toString(), 
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
+                                ),
+                              ),
+                            )
+                        ],
+                      ),
+                    );
+                  }
                 ),
               ],
             ),

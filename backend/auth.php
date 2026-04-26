@@ -60,7 +60,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         echo json_encode(["status" => "error", "message" => "Invalid action"]);
     }
+} elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if ($action === 'fetch_doctors') {
+        try {
+            $stmt = $conn->prepare("SELECT id, full_name as name, role as specialty FROM users WHERE role = 'doctor'");
+            $stmt->execute();
+            $doctors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Add mock distances/ratings since they aren't in the DB yet
+            foreach ($doctors as &$doc) {
+                $doc['specialty'] = 'Glaucoma Specialist';
+                $doc['distance'] = (rand(5, 50) / 10) . " km";
+                $doc['rating'] = 4.0 + (rand(0, 10) / 10);
+            }
+            
+            echo json_encode(["status" => "success", "doctors" => $doctors]);
+        } catch (PDOException $e) {
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(["status" => "error", "message" => "Invalid action or method"]);
+    }
 } else {
-    echo json_encode(["status" => "error", "message" => "Invalid request method"]);
-}
 ?>

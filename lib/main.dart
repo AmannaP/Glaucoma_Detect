@@ -12,12 +12,15 @@ import 'screens/notifications.dart';
 import 'screens/doctor_dashboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/notification_service.dart';
+import 'services/message_poller_service.dart';
+import 'services/navigation_service.dart';
 
 late List<CameraDescription> cameras;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().initialize();
+  MessagePollerService().startPolling();
   try {
     cameras = await availableCameras();
   } catch (e) {
@@ -35,6 +38,7 @@ class EyeDetectApp extends StatelessWidget {
     
     return MaterialApp(
       title: 'Glaucoma Detect',
+      navigatorKey: NavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -171,7 +175,7 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
               foregroundColor: primaryGreen,
               elevation: 0,
             ),
-      body: pages[_selectedIndex],
+      body: SafeArea(child: pages[_selectedIndex]),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [

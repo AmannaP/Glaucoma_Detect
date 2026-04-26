@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
+import '../services/notification_service.dart';
 
 class PrescriptionFormScreen extends StatefulWidget {
   final String patientName;
@@ -38,23 +40,25 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
         backgroundColor: Colors.black,
         foregroundColor: primaryGreen,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderSection(),
-              const SizedBox(height: 30),
-              _buildPatientInfoSection(),
-              const SizedBox(height: 30),
-              _buildFormFields(),
-              const SizedBox(height: 30),
-              _buildApprovalSection(),
-              const SizedBox(height: 40),
-              _buildSubmitButton(),
-            ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeaderSection(),
+                const SizedBox(height: 30),
+                _buildPatientInfoSection(),
+                const SizedBox(height: 30),
+                _buildFormFields(),
+                const SizedBox(height: 30),
+                _buildApprovalSection(),
+                const SizedBox(height: 40),
+                _buildSubmitButton(),
+              ],
+            ),
           ),
         ),
       ),
@@ -219,15 +223,41 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
       final file = File("${output.path}/$fileName");
       await file.writeAsBytes(await pdf.save());
 
-      // Also save to shared prefs for history view
+      // Also save to shared prefs for history view (Patient's side)
       final prefs = await SharedPreferences.getInstance();
-      final List<String> currentPrescriptions = prefs.getStringList('prescriptions') ?? [];
-      currentPrescriptions.add("${DateTime.now().toString().split(' ')[0]} - ${_diagnosisController.text}");
-      await prefs.setStringList('prescriptions', currentPrescriptions);
+      final String? existingData = prefs.getString('patient_prescriptions');
+      List<dynamic> prescriptions = existingData != null ? json.decode(existingData) : [];
+      
+      final String dateStr = DateTime.now().toString().split(' ')[0];
+      prescriptions.insert(0, {
+        "date": dateStr,
+        "diagnosis": _diagnosisController.text,
+        "filePath": file.path,
+        "doctorName": prefs.getString('user_name') ?? "Doctor",
+      });
+      
+      await prefs.setString('patient_prescriptions', json.encode(prescriptions));
+
+      // Also save to doctor's own record
+      final String? doctorData = prefs.getString('doctor_prescriptions');
+      List<dynamic> doctorPrescriptions = doctorData != null ? json.decode(doctorData) : [];
+      doctorPrescriptions.insert(0, {
+        "date": dateStr,
+        "diagnosis": _diagnosisController.text,
+        "filePath": file.path,
+        "patientName": widget.patientName,
+      });
+      await prefs.setString('doctor_prescriptions', json.encode(doctorPrescriptions));
+
+      // Push notification to the patient
+      await NotificationService().showInfoNotification(
+        title: "📄 New Prescription Issued",
+        body: "A new prescription for '${_diagnosisController.text}' has been sent to your profile.",
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Prescription PDF Generated & Saved!"), backgroundColor: Color(0xFF00C853)),
+          const SnackBar(content: Text("Prescription PDF Generated & Sent to Patient!"), backgroundColor: Color(0xFF00C853)),
         );
         Navigator.pop(context);
       }
