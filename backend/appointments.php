@@ -7,7 +7,19 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if (isset($data['user_id'], $data['doctor_name'], $data['specialty'], $data['date'], $data['time'])) {
+    if (isset($_GET['action']) && $_GET['action'] === 'update_status') {
+        if (isset($data['id'], $data['status'])) {
+            try {
+                $stmt = $conn->prepare("UPDATE appointments SET status = ? WHERE id = ?");
+                $stmt->execute([$data['status'], $data['id']]);
+                echo json_encode(["status" => "success", "message" => "Status updated successfully"]);
+            } catch (PDOException $e) {
+                echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            }
+        } else {
+            echo json_encode(["status" => "error", "message" => "Missing id or status"]);
+        }
+    } elseif (isset($data['user_id'], $data['doctor_name'], $data['specialty'], $data['date'], $data['time'])) {
         $user_id = $data['user_id'];
         $doctor_name = $data['doctor_name'];
         $specialty = $data['specialty'];
@@ -25,7 +37,12 @@ if ($method === 'POST') {
 
             $stmt = $conn->prepare("INSERT INTO appointments (user_id, doctor_name, specialty, date, time) VALUES (?, ?, ?, ?, ?)");
             $stmt->execute([$user_id, $doctor_name, $specialty, $date, $time]);
-            echo json_encode(["status" => "success", "message" => "Appointment booked successfully"]);
+            $appointment_id = $conn->lastInsertId();
+            echo json_encode([
+                "status" => "success", 
+                "message" => "Appointment booked successfully",
+                "appointment_id" => $appointment_id
+            ]);
         } catch (PDOException $e) {
             echo json_encode(["status" => "error", "message" => $e->getMessage()]);
         }
@@ -53,7 +70,7 @@ if ($method === 'POST') {
                 FROM appointments a
                 JOIN users u ON a.user_id = u.id
                 WHERE a.doctor_name = ?
-                ORDER BY a.date ASC, a.time ASC
+                ORDER BY a.date DESC, a.time DESC
             ");
             $stmt->execute([$doctor_name]);
             $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);

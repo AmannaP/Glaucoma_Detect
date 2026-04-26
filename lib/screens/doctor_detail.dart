@@ -4,6 +4,7 @@ import 'login.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'messages.dart';
 import '../services/notification_service.dart';
 import 'video_call.dart';
@@ -86,12 +87,35 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
       final result = json.decode(response.body);
       if (result['status'] == 'success') {
-        // Add real notification
-        await NotificationService.addNotification(
-          title: "Appointment Booked",
-          body: "Your appointment with ${widget.doctor['name']} on $dateStr at $_selectedTime has been confirmed.",
-          type: "reminder"
-        );
+        final int? appId = result['appointment_id'] != null ? int.tryParse(result['appointment_id'].toString()) : null;
+        
+        // Parse date and time for scheduling
+        DateTime? apptDateTime;
+        try {
+          final String dateTimeStr = "$dateStr $_selectedTime";
+          // Use intl to parse "2026-04-26 09:00 AM"
+          final format = DateFormat("yyyy-MM-dd hh:mm a");
+          apptDateTime = format.parse(dateTimeStr);
+        } catch (e) {
+          debugPrint("Date parsing error: $e");
+        }
+
+        // Schedule real notifications
+        if (appId != null && apptDateTime != null) {
+          await NotificationService().scheduleConsultationReminders(
+            appointmentId: appId,
+            appointmentDateTime: apptDateTime,
+            doctorOrPatientName: widget.doctor['name'],
+          );
+        } else {
+          // Fallback to simple history entry if scheduling fails
+          await NotificationService.addNotification(
+            title: "Appointment Booked",
+            body: "Your appointment with ${widget.doctor['name']} on $dateStr at $_selectedTime has been confirmed.",
+            type: "reminder"
+          );
+        }
+        
         _showBookingConfirmation();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'])));

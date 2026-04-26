@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'messages.dart';
 import '../services/notification_service.dart';
 import 'prescription_form.dart';
+import 'video_call.dart';
 
 class DoctorDashboard extends StatefulWidget {
   const DoctorDashboard({super.key});
@@ -140,40 +141,42 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Flexible(
-                                      child: TextButton.icon(
-                                        onPressed: () {
-                                          Navigator.push(context, MaterialPageRoute(builder: (_) => MessagesScreen(doctorName: appt['patient_name'])));
-                                        },
-                                        icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                                        label: const Text("Chat", style: TextStyle(fontSize: 12)),
-                                        style: TextButton.styleFrom(foregroundColor: Colors.blueAccent, padding: EdgeInsets.zero),
-                                      ),
+                                    // Chat button
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(context, MaterialPageRoute(builder: (_) => MessagesScreen(doctorName: appt['patient_name'])));
+                                      },
+                                      icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                                      label: const Text("Chat", style: TextStyle(fontSize: 12)),
+                                      style: TextButton.styleFrom(foregroundColor: Colors.blueAccent, padding: EdgeInsets.zero),
                                     ),
-                                    Flexible(
-                                      child: TextButton.icon(
-                                        onPressed: () {
-                                          Navigator.push(context, MaterialPageRoute(
-                                            builder: (_) => PrescriptionFormScreen(
-                                              patientName: appt['patient_name'],
-                                              patientEmail: appt['patient_email'] ?? 'patient@example.com',
-                                            )
-                                          ));
-                                        },
-                                        icon: const Icon(Icons.medication_outlined, size: 16),
-                                        label: const Text("Prescribe", style: TextStyle(fontSize: 12)),
-                                        style: TextButton.styleFrom(foregroundColor: Colors.amberAccent, padding: EdgeInsets.zero),
-                                      ),
+                                    // Prescribe button
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(context, MaterialPageRoute(
+                                          builder: (_) => PrescriptionFormScreen(
+                                            patientName: appt['patient_name'],
+                                            patientEmail: appt['patient_email'] ?? 'patient@example.com',
+                                          )
+                                        ));
+                                      },
+                                      icon: const Icon(Icons.medication_outlined, size: 16),
+                                      label: const Text("Prescribe", style: TextStyle(fontSize: 12)),
+                                      style: TextButton.styleFrom(foregroundColor: Colors.amberAccent, padding: EdgeInsets.zero),
                                     ),
-                                    Flexible(
-                                      child: TextButton.icon(
-                                        onPressed: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Appointment marked as completed")));
-                                        },
-                                        icon: const Icon(Icons.check_circle_outline, size: 16),
-                                        label: const Text("Complete", style: TextStyle(fontSize: 12)),
-                                        style: TextButton.styleFrom(foregroundColor: primaryGreen, padding: EdgeInsets.zero),
-                                      ),
+                                    // Video Call button
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(context, MaterialPageRoute(
+                                          builder: (_) => VideoCallScreen(
+                                            remoteName: appt['patient_name'],
+                                            appointmentId: int.tryParse(appt['id'].toString()),
+                                          )
+                                        ));
+                                      },
+                                      icon: const Icon(Icons.videocam_outlined, size: 16),
+                                      label: const Text("Video Call", style: TextStyle(fontSize: 12)),
+                                      style: TextButton.styleFrom(foregroundColor: primaryGreen, padding: EdgeInsets.zero),
                                     ),
                                   ],
                                 ),

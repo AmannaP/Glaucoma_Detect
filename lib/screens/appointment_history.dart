@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'video_call.dart';
 
 class AppointmentHistoryScreen extends StatefulWidget {
   const AppointmentHistoryScreen({super.key});
@@ -45,14 +47,34 @@ class _AppointmentHistoryScreenState extends State<AppointmentHistoryScreen> {
           final now = DateTime.now();
           
           setState(() {
+            final dateFormat = DateFormat("yyyy-MM-dd hh:mm a");
+            
             upcomingAppointments = allAppointments.where((app) {
-              DateTime appDate = DateTime.parse(app['date']);
-              return appDate.isAfter(now) || appDate.isAtSameMomentAs(DateTime(now.year, now.month, now.day));
+              if (app['status'] == 'completed') return false;
+              try {
+                final appDateTime = dateFormat.parse("${app['date']} ${app['time']}");
+                // An appointment stays "upcoming" until 30 minutes after its start time
+                return appDateTime.add(const Duration(minutes: 30)).isAfter(now);
+              } catch (e) {
+                return true; 
+              }
             }).toList();
-
+            
+            // Sort: closest first
+            upcomingAppointments.sort((a, b) {
+              try {
+                return dateFormat.parse("${a['date']} ${a['time']}").compareTo(dateFormat.parse("${b['date']} ${b['time']}"));
+              } catch (e) { return 0; }
+            });
+            
             pastAppointments = allAppointments.where((app) {
-              DateTime appDate = DateTime.parse(app['date']);
-              return appDate.isBefore(DateTime(now.year, now.month, now.day));
+              if (app['status'] == 'completed') return true;
+              try {
+                final appDateTime = dateFormat.parse("${app['date']} ${app['time']}");
+                return appDateTime.add(const Duration(minutes: 30)).isBefore(now);
+              } catch (e) {
+                return false;
+              }
             }).toList();
           });
         }
@@ -162,7 +184,29 @@ class _AppointmentHistoryScreenState extends State<AppointmentHistoryScreen> {
                     ],
                   ),
                 ),
-                if (isUpcoming)
+                if (isUpcoming) ...[
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VideoCallScreen(
+                            remoteName: app['doctor_name'],
+                            appointmentId: int.tryParse(app['id'].toString()),
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryGreen,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text("Join Call", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ] else
                   const Icon(Icons.chevron_right, color: Colors.white24),
               ],
             ),

@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:camera/camera.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'prescription_form.dart';
+import '../services/notification_service.dart';
 import '../main.dart'; // To access the cameras list
 
 class VideoCallScreen extends StatefulWidget {
   final String remoteName;
   final bool isIncoming;
+  final int? appointmentId; // used to update status when patient marks complete
 
-  const VideoCallScreen({super.key, required this.remoteName, this.isIncoming = false});
+  const VideoCallScreen({
+    super.key,
+    required this.remoteName,
+    this.isIncoming = false,
+    this.appointmentId,
+  });
 
   @override
   State<VideoCallScreen> createState() => _VideoCallScreenState();
@@ -19,6 +28,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   CameraController? _controller;
   bool _isMuted = false;
   bool _isVideoOff = false;
+  bool _callStarted = false;
   int _secondsElapsed = 0;
   Timer? _timer;
 
@@ -28,6 +38,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     _initializeCamera();
     if (!widget.isIncoming) {
       _startTimer();
+      _callStarted = true;
     }
   }
 
@@ -47,15 +58,13 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       await _controller!.initialize();
       if (mounted) setState(() {});
     } catch (e) {
-      print("Camera initialization error: $e");
+      debugPrint("Camera initialization error: $e");
     }
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _secondsElapsed++;
-      });
+      if (mounted) setState(() => _secondsElapsed++);
     });
   }
 
@@ -71,6 +80,126 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     _controller?.dispose();
     super.dispose();
   }
+
+  // ─────────────────────────────────────────────────────────
+  // End-Call Logic
+  // ─────────────────────────────────────────────────────────
+
+  Future<void> _onEndCall() async {
+    _timer?.cancel();
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('user_role') ?? 'patient';
+
+    if (role == 'doctor') {
+      // Doctor ends call → go to prescription form
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PrescriptionFormScreen(
+              patientName: widget.remoteName,
+              patientEmail: "patient@glaucoma.com",
+            ),
+          ),
+        );
+      }
+    } else {
+      // Patient ends call → ask if consultation was completed
+      if (mounted) {
+        _showCompletionDialog();
+      }
+    }
+  }
+
+  void _showCompletionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF131C24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Consultation Complete?",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          "Was the consultation with your doctor completed successfully?",
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          // No — leave as pending so patient can chat to reschedule
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).pop(); // close video call
+            },
+            child: const Text("No, Extend",
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+          // Yes — update status to 'completed' on backend
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00C853),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _markCompleted();
+            },
+            child: const Text("Yes, Completed",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _markCompleted() async {
+    if (widget.appointmentId == null) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'http://169.239.251.102:280/~chika.amanna/Glaucoma_Detect/backend/appointments.php?action=update_status',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'id': widget.appointmentId, 'status': 'completed'}),
+      );
+
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        await NotificationService.addNotification(
+          title: '✅ Consultation Completed',
+          body:
+              'Your consultation with ${widget.remoteName} has been marked as completed.',
+          type: 'info',
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Consultation marked as completed!"),
+              backgroundColor: Color(0xFF00C853),
+            ),
+          );
+          Navigator.of(context).pop();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // UI
+  // ─────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -89,17 +218,20 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 children: [
                   CircleAvatar(
                     radius: 80,
-                    backgroundColor: const Color(0xFF00C853).withOpacity(0.1),
+                    backgroundColor: const Color(0xFF00C853).withValues(alpha: 0.1),
                     child: const Icon(Icons.person, size: 100, color: Color(0xFF00C853)),
                   ),
                   const SizedBox(height: 20),
                   Text(
                     widget.remoteName,
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                        fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    widget.isIncoming ? "Incoming Video Call..." : _formatTime(_secondsElapsed),
+                    widget.isIncoming && !_callStarted
+                        ? "Incoming Video Call..."
+                        : _formatTime(_secondsElapsed),
                     style: const TextStyle(fontSize: 18, color: Colors.white70),
                   ),
                 ],
@@ -120,7 +252,9 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 border: Border.all(color: Colors.white24, width: 2),
               ),
               clipBehavior: Clip.antiAlias,
-              child: _controller != null && _controller!.value.isInitialized && !_isVideoOff
+              child: _controller != null &&
+                      _controller!.value.isInitialized &&
+                      !_isVideoOff
                   ? AspectRatio(
                       aspectRatio: _controller!.value.aspectRatio,
                       child: CameraPreview(_controller!),
@@ -149,27 +283,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   color: Colors.red,
                   iconColor: Colors.white,
                   size: 70,
-                  onTap: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    final role = prefs.getString('user_role') ?? 'patient';
-                    
-                    if (mounted) {
-                      if (role == 'doctor') {
-                        // Navigate to prescription form
-                        Navigator.pushReplacement(
-                          context, 
-                          MaterialPageRoute(
-                            builder: (_) => PrescriptionFormScreen(
-                              patientName: widget.remoteName,
-                              patientEmail: "patient@glaucoma.com", // Simulated autofill
-                            )
-                          )
-                        );
-                      } else {
-                        Navigator.pop(context);
-                      }
-                    }
-                  },
+                  onTap: _onEndCall,
                 ),
                 _buildCallAction(
                   icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
@@ -180,17 +294,22 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
             ),
           ),
 
-          // Accept/Decline (Only if incoming)
-          if (widget.isIncoming && _secondsElapsed == 0)
+          // Accept/Decline (Only if incoming and call not yet started)
+          if (widget.isIncoming && !_callStarted)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.8),
+                color: Colors.black.withValues(alpha: 0.8),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Incoming Call", style: TextStyle(color: Colors.white70, fontSize: 18)),
+                    const Text("Incoming Call",
+                        style: TextStyle(color: Colors.white70, fontSize: 18)),
                     const SizedBox(height: 10),
-                    Text(widget.remoteName, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    Text(widget.remoteName,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold)),
                     const SizedBox(height: 100),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -204,9 +323,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                           icon: Icons.videocam,
                           color: const Color(0xFF00C853),
                           onTap: () {
-                            setState(() {
-                              // Accept call
-                            });
+                            setState(() => _callStarted = true);
                             _startTimer();
                           },
                         ),
@@ -233,10 +350,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         child: Icon(icon, color: iconColor, size: size * 0.5),
       ),
     );

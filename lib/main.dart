@@ -11,11 +11,13 @@ import 'screens/appointment_history.dart';
 import 'screens/notifications.dart';
 import 'screens/doctor_dashboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/notification_service.dart';
 
 late List<CameraDescription> cameras;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().initialize();
   try {
     cameras = await availableCameras();
   } catch (e) {
